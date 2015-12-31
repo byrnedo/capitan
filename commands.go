@@ -6,11 +6,17 @@ import (
 	. "github.com/byrnedo/capitan/logger"
 	"strings"
 	"fmt"
+	"io/ioutil"
 )
 
 func exists(name string) (bool) {
-	_, err := sh.Command("docker", "inspect", "--format", "{{ .State.Running }}", name).Output()
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--format", "{{ .State.Running }}", name).Output()
 	if err != nil {
+		return false
+	}
+	if strings.Trim(string(out), " \n") == "<no value>" {
 		return false
 	}
 	return true
@@ -18,7 +24,9 @@ func exists(name string) (bool) {
 }
 
 func isRunning(name string) (bool) {
-	out, err := sh.Command("docker", "inspect", "--format", "{{ .State.Running }}", name).Output()
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--format", "{{ .State.Running }}", name).Output()
 	if err != nil {
 		return false
 	}
@@ -32,7 +40,7 @@ func runCmd(args ...interface{}) error {
 	ses := sh.NewSession()
 	Trace.Println(ses.Env)
 
-	ses.ShowCMD = true
+	//ses.ShowCMD = true
 	out, err := ses.Command("docker", args...).Output()
 	Trace.Println(string(out))
 	if err != nil {
@@ -63,17 +71,19 @@ func DockerRun(settings SettingsList) error {
 	sort.Sort(settings)
 	for _, set := range settings {
 
-		if exists(set.Name) {
-			if err := runCmd("start", set.Name); err != nil {
-				return err
+		if exists(set.Name){
+
+			if isRunning(set.Name) {
+				Info.Println("Already running:", set.Name)
+			} else {
+				Info.Println("Starting " + set.Name)
+				if err := runCmd("start", set.Name); err != nil {
+					return err
+				}
 			}
 			continue
 		}
 
-		if isRunning(set.Name) {
-			Info.Println(set.Name, "already running")
-			continue
-		}
 		Info.Println("Running " + set.Name)
 		cmd := append([]interface{}{"run", "-d", "-t", "--name", set.Name}, set.Args...)
 		cmd = append(cmd, set.Image)
@@ -144,9 +154,9 @@ func DockerStop(settings SettingsList, secBeforeKill int) error {
 func DockerRm(settings SettingsList, force bool) error {
 	sort.Reverse(settings)
 	for _, set := range settings {
-		var forceStr = ""
+		var forceStr = "--force=false"
 		if force {
-			forceStr = "--force "
+			forceStr = "--force=true"
 		}
 
 		Info.Println("Removing " + set.Name)

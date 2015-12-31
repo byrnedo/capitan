@@ -132,11 +132,8 @@ func (f *FileRunner) createCommands(lines [][]byte) (cmdsList SettingsList, err 
 				}
 			}
 		default:
-			strArgs := append(setting.Args, "--" + action)
-			strArgs = append(strArgs,args)
-			for _, arg := range strArgs {
-				setting.Args = append(setting.Args,arg)
-			}
+			setting.Args = append(setting.Args, "--" + action)
+			setting.Args = append(setting.Args, args)
 		}
 
 		cmdsMap[container] = setting
