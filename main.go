@@ -58,6 +58,19 @@ func main() {
 			},
 		},
 		{
+			Name:      "ps",
+			Aliases:     []string{},
+			Usage:     "Show container status",
+			Action: func(c *cli.Context) {
+				settings := getSettings(filePath)
+				if err := DockerPs(settings); err != nil {
+					Error.Println(err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
 			Name:      "build",
 			Aliases:     []string{},
 			Usage:     "Build any containers with 'build' flag set",

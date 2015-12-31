@@ -36,7 +36,7 @@ func isRunning(name string) (bool) {
 	return false
 }
 
-func runCmd(args ...interface{}) error {
+func runCmd(args ...interface{}) ([]byte, error) {
 	ses := sh.NewSession()
 	Trace.Println(ses.Env)
 
@@ -44,9 +44,9 @@ func runCmd(args ...interface{}) error {
 	out, err := ses.Command("docker", args...).Output()
 	Trace.Println(string(out))
 	if err != nil {
-		return err
+		return out, err
 	}
-	return nil
+	return out, nil
 }
 
 
@@ -57,7 +57,7 @@ func DockerBuild(settings SettingsList) error {
 			continue
 		}
 		Info.Println("Building " + set.Name)
-		if err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
+		if _,err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
 			return err
 		}
 
@@ -77,7 +77,7 @@ func DockerRun(settings SettingsList) error {
 				Info.Println("Already running:", set.Name)
 			} else {
 				Info.Println("Starting " + set.Name)
-				if err := runCmd("start", set.Name); err != nil {
+				if _, err := runCmd("start", set.Name); err != nil {
 					return err
 				}
 			}
@@ -88,7 +88,7 @@ func DockerRun(settings SettingsList) error {
 		cmd := append([]interface{}{"run", "-d", "-t", "--name", set.Name}, set.Args...)
 		cmd = append(cmd, set.Image)
 		cmd = append(cmd, set.Command...)
-		if err := runCmd(cmd...); err != nil {
+		if _, err := runCmd(cmd...); err != nil {
 			return err
 		}
 	}
@@ -103,7 +103,7 @@ func DockerStart(settings SettingsList) error {
 			continue
 		}
 		Info.Println("Starting " + set.Name)
-		if err := runCmd("start", set.Name); err != nil {
+		if _, err := runCmd("start", set.Name); err != nil {
 			return err
 		}
 	}
@@ -114,10 +114,27 @@ func DockerRestart(settings SettingsList, secBeforeKill int) error {
 	sort.Reverse(settings)
 	for _, set := range settings {
 		Info.Println("Restarting " + set.Name)
-		if err := runCmd("restart", "--time", fmt.Sprintf("%d",secBeforeKill), set.Name); err != nil {
+		if _, err := runCmd("restart", "--time", fmt.Sprintf("%d",secBeforeKill), set.Name); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func DockerPs(settings SettingsList) error {
+	sort.Reverse(settings)
+	nameFilter := make([]string,0)
+	for _, set := range settings {
+		nameFilter = append(nameFilter, "-f", "name="+set.Name)
+	}
+	var (
+		err error
+		out []byte
+	)
+	if out, err = runCmd("ps", "-a", nameFilter ); err != nil {
+		return err
+	}
+	Info.Print(string(out))
 	return nil
 }
 
@@ -129,7 +146,7 @@ func DockerKill(settings SettingsList, signal string) error {
 			continue
 		}
 		Info.Println("Killing " + set.Name)
-		if err := runCmd("kill", "--signal", signal, set.Name); err != nil {
+		if _, err := runCmd("kill", "--signal", signal, set.Name); err != nil {
 			return err
 		}
 	}
@@ -144,7 +161,7 @@ func DockerStop(settings SettingsList, secBeforeKill int) error {
 			continue
 		}
 		Info.Println("Stopping " + set.Name)
-		if err := runCmd("stop", "--time" , fmt.Sprintf("%d",secBeforeKill), set.Name); err != nil {
+		if _, err := runCmd("stop", "--time" , fmt.Sprintf("%d",secBeforeKill), set.Name); err != nil {
 			return err
 		}
 	}
@@ -160,7 +177,7 @@ func DockerRm(settings SettingsList, force bool) error {
 		}
 
 		Info.Println("Removing " + set.Name)
-		if err := runCmd("rm", forceStr, set.Name); err != nil {
+		if _, err := runCmd("rm", forceStr, set.Name); err != nil {
 			return err
 		}
 	}
