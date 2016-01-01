@@ -23,6 +23,18 @@ func getImageId(imageName string) string {
 	return imageId
 }
 
+func getContainerIPAddress(name string) string {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.NetworkSettings.IPAddress}}", name).Output()
+	if err != nil {
+		return ""
+	}
+	ip := strings.Trim(string(out), " \n")
+	return ip
+
+}
+
 func getContainerImageId(name string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -211,8 +223,17 @@ func DockerRestart(settings *ProjectSettings, secBeforeKill int, dryRun bool) er
 	return nil
 }
 
+func DockerIp(settings *ProjectSettings) error {
+	sort.Sort(settings.ContainerSettingsList)
+	for _, set := range settings.ContainerSettingsList {
+		ip := getContainerIPAddress(set.Name)
+		Info.Printf("%s: %s", set.Name, ip)
+	}
+	return nil
+}
+
 func DockerPs(settings *ProjectSettings) error {
-	sort.Reverse(settings.ContainerSettingsList)
+	sort.Sort(settings.ContainerSettingsList)
 	nameFilter := make([]string, 0)
 	for _, set := range settings.ContainerSettingsList {
 		nameFilter = append(nameFilter, "-f", "name="+set.Name)

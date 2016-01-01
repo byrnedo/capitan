@@ -79,6 +79,19 @@ func main() {
 			},
 		},
 		{
+			Name:    "ip",
+			Aliases: []string{},
+			Usage:   "Show container ip addresses",
+			Action: func(c *cli.Context) {
+				settings := getSettings(filePath)
+				if err := DockerIp(settings); err != nil {
+					Error.Println(err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
 			Name:    "build",
 			Aliases: []string{},
 			Usage:   "Build any containers with 'build' flag set",
