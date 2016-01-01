@@ -7,19 +7,20 @@ import (
 )
 
 var (
-	Trace   *log.Logger
+	Debug   *log.Logger
 	Info    *log.Logger
 	Warning *log.Logger
 	Error   *log.Logger
 
 	//logFormat int = log.Ldate | log.Ltime | log.Lshortfile
-	logFormat int  = 0
+	logFormat int = 0
+	level         = InfoLevel
 )
 
 type LogLevel int
 
 const (
-	TraceLevel LogLevel = 0
+	DebugLevel LogLevel = 0
 	InfoLevel  LogLevel = 1
 	WarnLevel  LogLevel = 2
 	ErrorLevel LogLevel = 3
@@ -27,7 +28,7 @@ const (
 
 func init() {
 
-	Trace = log.New(ioutil.Discard,
+	Debug = log.New(ioutil.Discard,
 		"DEBUG: ",
 		logFormat)
 
@@ -44,8 +45,13 @@ func init() {
 		logFormat)
 }
 
+func GetLevel() LogLevel {
+	return level
+}
+
 func SetDebug() {
-	Trace = log.New(os.Stdout,
+	level = DebugLevel
+	Debug = log.New(os.Stdout,
 		"DEBUG: ",
 		logFormat)
 }

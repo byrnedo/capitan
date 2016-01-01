@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/codeskyblue/go-sh"
-	. "github.com/byrnedo/capitan/logger"
 	"bytes"
-	"strings"
+	. "github.com/byrnedo/capitan/logger"
+	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
+	"os"
+	"path"
+	"strings"
+	"unicode"
 )
-
 
 type FileRunner struct {
 	FilePath string
@@ -19,43 +21,45 @@ func NewFileRunner(path string) *FileRunner {
 	}
 }
 
-
-func (f *FileRunner) Run() (SettingsList, error){
+func (f *FileRunner) Run() (*ProjectSettings, error) {
 	var (
 		output []byte
-		err error
+		err    error
 	)
-	pwd, _ := sh.Command("pwd").Output()
-	Trace.Println(string(pwd))
 	if output, err = sh.Command(f.FilePath).Output(); err != nil {
 		return nil, err
 	}
-	cmdMap, err := f.parseOutput(output)
-	return cmdMap, err
+	settings, err := f.parseOutput(output)
+	return &settings, err
 
 }
 
-func (f *FileRunner) parseOutput(out []byte) (SettingsList, error) {
-	lines := bytes.Split(out, []byte{'\n'} )
-	cmdMap,err := f.createCommands(lines)
-	return cmdMap, err
+func (f *FileRunner) parseOutput(out []byte) (ProjectSettings, error) {
+	lines := bytes.Split(out, []byte{'\n'})
+	settings, err := f.parseSettings(lines)
+	return settings, err
 
 }
 
+type ProjectSettings struct {
+	ProjectName           string
+	ProjectSeparator      string
+	ContainerSettingsList SettingsList
+}
 
-type Settings struct {
-	Name string
-	Placement int
-	Args []interface{}
-	Image string
-	Build string
-	Command []interface{}
-	Depends []string
-	Hooks map[string]string
+type ContainerSettings struct {
+	Name        string
+	Placement   int
+	Args        []interface{}
+	Image       string
+	Build       string
+	Command     []interface{}
+	Depends     []string
+	Hooks       map[string]string
 	UniqueLabel string
 }
 
-type SettingsList []Settings
+type SettingsList []ContainerSettings
 
 func (s SettingsList) Len() int {
 	return len(s)
@@ -67,10 +71,17 @@ func (s SettingsList) Less(i, j int) bool {
 	return s[i].Placement < s[j].Placement
 }
 
-func (f *FileRunner) createCommands(lines [][]byte) (cmdsList SettingsList, err error) {
+func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
 	//minimum of len1 at this point in parts
 
-	cmdsMap := make(map[string]Settings,0)
+	cmdsMap := make(map[string]ContainerSettings, 0)
+
+	projName, _ := os.Getwd()
+	projName = toSnake(path.Base(projName))
+	projNameArr := strings.Split(projName, "_")
+	projSettings.ProjectName = projNameArr[len(projNameArr)-1]
+
+	projSettings.ProjectSeparator = "_"
 
 	for _, line := range lines {
 
@@ -87,12 +98,12 @@ func (f *FileRunner) createCommands(lines [][]byte) (cmdsList SettingsList, err 
 
 		container := string(lineParts[0])
 
-		if _, found := cmdsMap[container]; ! found {
-			cmdsMap[container] = Settings{
+		if _, found := cmdsMap[container]; !found {
+			cmdsMap[container] = ContainerSettings{
 				Placement: len(cmdsMap),
-				Args: make([]interface{}, 0),
-				Depends: make([]string, 0),
-				Hooks: make(map[string]string, 0),
+				Args:      make([]interface{}, 0),
+				Depends:   make([]string, 0),
+				Hooks:     make(map[string]string, 0),
 			}
 		}
 
@@ -104,7 +115,7 @@ func (f *FileRunner) createCommands(lines [][]byte) (cmdsList SettingsList, err 
 			args = string(lineParts[2])
 		}
 		args = strings.TrimRight(args, " ")
-		switch(action){
+		switch action {
 		case "command":
 			if len(args) > 0 {
 				parsedArgs := str.ToArgv(args)
@@ -121,32 +132,71 @@ func (f *FileRunner) createCommands(lines [][]byte) (cmdsList SettingsList, err 
 				setting.Build = args
 			}
 		case "link":
+			Info.Println("Links not implemented yet")
 		case "depends":
 			setting.Depends = append(setting.Depends, args)
 		case "hook":
-			if len(args) > 1 {
+			if len(args) > 0 {
 				curHooks := setting.Hooks
 				argParts := strings.SplitN(args, " ", 1)
-				if len(argParts) > 1{
+				if len(argParts) > 1 {
 					curHooks[argParts[0]] = argParts[1]
 				}
 			}
+		case "global":
+			if len(args) > 0 {
+				argParts := strings.SplitN(args, " ", 1)
+				if len(argParts) > 1 {
+					switch argParts[0] {
+					case "project":
+						projSettings.ProjectName = argParts[1]
+					case "project_sep":
+						projSettings.ProjectSeparator = stripChars(argParts[1], " \t")
+					}
+				}
+			}
 		default:
-			setting.Args = append(setting.Args, "--" + action)
+			setting.Args = append(setting.Args, "--"+action)
 			setting.Args = append(setting.Args, args)
 		}
 
 		cmdsMap[container] = setting
 	}
 
-	cmdsList = make(SettingsList, len(cmdsMap))
+	cmdsList := make(SettingsList, len(cmdsMap))
 	var count = 0
 	for name, item := range cmdsMap {
-		item.Name = name
+		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
 		cmdsList[count] = item
-		count ++
+		count++
 	}
+	projSettings.ContainerSettingsList = cmdsList
 	return
 
 }
 
+func stripChars(str, chr string) string {
+	return strings.Map(func(r rune) rune {
+		if strings.IndexRune(chr, r) < 0 {
+			return r
+		}
+		return -1
+	}, str)
+}
+
+// ToSnake convert the given string to snake case following the Golang format:
+// acronyms are converted to lower-case and preceded by an underscore.
+func toSnake(in string) string {
+	runes := []rune(in)
+	length := len(runes)
+
+	var out []rune
+	for i := 0; i < length; i++ {
+		if i > 0 && unicode.IsUpper(runes[i]) && ((i+1 < length && unicode.IsLower(runes[i+1])) || unicode.IsLower(runes[i-1])) {
+			out = append(out, '_')
+		}
+		out = append(out, unicode.ToLower(runes[i]))
+	}
+
+	return string(out)
+}
