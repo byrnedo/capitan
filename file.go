@@ -138,10 +138,11 @@ func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings
 		case "hook":
 			if len(args) > 0 {
 				curHooks := setting.Hooks
-				argParts := strings.SplitN(args, " ", 1)
+				argParts := strings.SplitN(args, " ", 2)
 				if len(argParts) > 1 {
 					curHooks[argParts[0]] = argParts[1]
 				}
+				setting.Hooks = curHooks
 			}
 		case "global":
 			if len(args) > 0 {

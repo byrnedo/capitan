@@ -5,7 +5,9 @@ import (
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
+	"github.com/mgutz/str"
 	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 )
@@ -83,7 +85,13 @@ func DockerBuild(settings *ProjectSettings, dryRun bool) error {
 		}
 		Info.Println("Building " + set.Name)
 		if !dryRun {
+			if err := runHook("before.build", &set); err != nil {
+				return err
+			}
 			if _, err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
+				return err
+			}
+			if err := runHook("after.build", &set); err != nil {
 				return err
 			}
 		}
@@ -97,8 +105,9 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 
 	for _, set := range settings.ContainerSettingsList {
 
+
 		if !exists(set.Name) {
-			if err := runContainer(set.Name, set.Image, set.Args, set.Command, dryRun); err != nil {
+			if err := runContainer(&set, dryRun); err != nil {
 				return err
 			}
 			continue
@@ -115,7 +124,8 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 						return err
 					}
 				}
-				if err := runContainer(set.Name, set.Image, set.Args, set.Command, dryRun); err != nil {
+
+				if err := runContainer(&set, dryRun); err != nil {
 					return err
 				}
 				continue
@@ -136,16 +146,27 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 	return nil
 }
 
-func runContainer(name string, image string, args []interface{}, command []interface{}, dryRun bool) error {
-	Info.Println("Running " + name)
+func runContainer(set *ContainerSettings, dryRun bool) error {
+
+	Info.Println("Running " + set.Name)
 	if dryRun {
 		return nil
 	}
-	cmd := append([]interface{}{"run", "-d", "-t", "--name", name}, args...)
-	cmd = append(cmd, image)
-	cmd = append(cmd, command...)
-	_, err := runCmd(cmd...)
-	return err
+	if err := runHook("before.run", set); err != nil {
+		return err
+	}
+	cmd := append([]interface{}{"run", "-d", "-t", "--name", set.Name}, set.Args...)
+	cmd = append(cmd, set.Image)
+	cmd = append(cmd, set.Command...)
+	if _, err := runCmd(cmd...); err != nil {
+		return err
+	}
+
+	if err := runHook("after.run", set); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func DockerStart(settings *ProjectSettings, dryRun bool) error {
@@ -157,7 +178,13 @@ func DockerStart(settings *ProjectSettings, dryRun bool) error {
 		}
 		Info.Println("Starting " + set.Name)
 		if !dryRun {
+			if err := runHook("before.start", &set); err != nil {
+				return err
+			}
 			if _, err := runCmd("start", set.Name); err != nil {
+				return err
+			}
+			if err := runHook("after.start", &set); err != nil {
 				return err
 			}
 		}
@@ -170,7 +197,13 @@ func DockerRestart(settings *ProjectSettings, secBeforeKill int, dryRun bool) er
 	for _, set := range settings.ContainerSettingsList {
 		Info.Println("Restarting " + set.Name)
 		if !dryRun {
+			if err := runHook("before.restart", &set); err != nil {
+				return err
+			}
 			if _, err := runCmd("restart", "--time", fmt.Sprintf("%d", secBeforeKill), set.Name); err != nil {
+				return err
+			}
+			if err := runHook("after.restart", &set); err != nil {
 				return err
 			}
 		}
@@ -204,7 +237,13 @@ func DockerKill(settings *ProjectSettings, signal string, dryRun bool) error {
 		}
 		Info.Println("Killing " + set.Name)
 		if !dryRun {
+			if err := runHook("before.kill", &set); err != nil {
+				return err
+			}
 			if _, err := runCmd("kill", "--signal", signal, set.Name); err != nil {
+				return err
+			}
+			if err := runHook("after.kill", &set); err != nil {
 				return err
 			}
 		}
@@ -221,7 +260,13 @@ func DockerStop(settings *ProjectSettings, secBeforeKill int, dryRun bool) error
 		}
 		Info.Println("Stopping " + set.Name)
 		if !dryRun {
+			if err := runHook("before.stop", &set); err != nil {
+				return err
+			}
 			if _, err := runCmd("stop", "--time", fmt.Sprintf("%d", secBeforeKill), set.Name); err != nil {
+				return err
+			}
+			if err := runHook("after.stop", &set); err != nil {
 				return err
 			}
 		}
@@ -238,11 +283,52 @@ func DockerRm(settings *ProjectSettings, force bool, dryRun bool) error {
 		}
 
 		Info.Println("Removing " + set.Name)
-		if !dryRun {
+		if !dryRun && exists(set.Name) {
+			if err := runHook("before.rm", &set); err != nil {
+				return err
+			}
 			if _, err := runCmd("rm", forceStr, set.Name); err != nil {
+				return err
+			}
+			if err := runHook("after.rm", &set); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func runHook(hookName string, settings *ContainerSettings) error {
+	var (
+		hookScript string
+		found      bool
+		ses        *sh.Session
+		argVs      []string
+	)
+	if hookScript, found = settings.Hooks[hookName]; !found {
+		return nil
+	}
+
+	Info.Print("Executing hook: " + hookName + "\n")
+
+	ses = sh.NewSession()
+	ses.SetEnv("CAPITAN_CONTAINER_NAME", settings.Name)
+	ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
+	argVs = str.ToArgv(hookScript)
+	if len(argVs) > 1 {
+		ses.Command(argVs[0], toInterfaceSlice(argVs[1:])...)
+	} else {
+		ses.Command(argVs[0])
+	}
+	ses.Stdout = os.Stdout
+	ses.Stderr = os.Stderr
+	return ses.Run()
+}
+
+func toInterfaceSlice(data []string) (out []interface{}) {
+	out = make([]interface{}, len(data))
+	for i, item := range data {
+		out[i] = item
+	}
+	return
 }
