@@ -13,17 +13,27 @@ This means it will basically work with all versions of docker.
 - Future proof
 
 ## Commands
-- capitan up		Create then run or update containers 
+
+- `capitan up`		Create then run or update containers 
+
     - WARNING: If newer image is found it will remove the old container and run a new one
     - If container is stopped it will start it
-- capitan ps		Show container status
-- capitan ip		Show container ip addresses
-- capitan build	    Build any containers with 'build' flag set (WIP)
-- capitan start	    Start stopped containers
-- capitan restart	Restart containers
-- capitan stop		Stop running containers
-- capitan kill		Kill running containers using SIGKILL or a specified signal
-- capitan rm		Remove stopped containers
+    
+- `capitan ps`		Show container status
+
+- `capitan ip`		Show container ip addresses
+
+- `capitan build`   Build any containers with 'build' flag set (WIP)
+
+- `capitan start`   Start stopped containers
+
+- `capitan restart`	Restart containers
+
+- `capitan stop`	Stop running containers
+
+- `capitan kill`	Kill running containers using SIGKILL or a specified signal
+
+- `capitan rm`		Remove stopped containers
      
 ## Global options
      --file, -f "./capitan.cfg.sh"	config file to read
