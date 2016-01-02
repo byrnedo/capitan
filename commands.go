@@ -259,7 +259,7 @@ func DockerStart(settings *ProjectSettings, dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
 		if isRunning(set.Name) {
-			Info.Println(set.Name, "already running")
+			Info.Println("Already running:", set.Name)
 			continue
 		}
 		Info.Println("Starting " + set.Name)
