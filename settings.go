@@ -100,6 +100,19 @@ func (f *SettingsRunner) parseSettings(lines [][]byte) (projSettings ProjectSett
 			continue
 		}
 
+		if string(lineParts[0]) == "global" {
+			if len(lineParts) > 2 {
+				switch string(lineParts[1]) {
+				case "project":
+					projSettings.ProjectName = string(lineParts[2])
+				case "project_sep":
+					projSettings.ProjectSeparator = stripChars(string(lineParts[2]), " \t")
+				}
+			}
+			continue
+
+		}
+
 		container := string(lineParts[0])
 
 		if _, found := cmdsMap[container]; !found {
@@ -159,17 +172,6 @@ func (f *SettingsRunner) parseSettings(lines [][]byte) (projSettings ProjectSett
 				setting.Hooks = curHooks
 			}
 		case "global":
-			if len(args) > 0 {
-				argParts := strings.SplitN(args, " ", 1)
-				if len(argParts) > 1 {
-					switch argParts[0] {
-					case "project":
-						projSettings.ProjectName = argParts[1]
-					case "project_sep":
-						projSettings.ProjectSeparator = stripChars(argParts[1], " \t")
-					}
-				}
-			}
 		default:
 			setting.Args = append(setting.Args, "--"+action)
 			setting.Args = append(setting.Args, args)
