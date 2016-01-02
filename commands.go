@@ -10,9 +10,35 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
+"math/rand"
 )
 
 const UniqueLabelName = "capitanRunCmd"
+
+var colorList = []string{
+	"white",
+	"red",
+	"green",
+	"yellow",
+	"blue",
+	"magenta",
+	"cyan",
+	"white",
+}
+
+func shuffle(a []string) {
+	for i := range a {
+		j := rand.Intn(i + 1)
+		a[i], a[j] = a[j], a[i]
+	}
+}
+
+func init(){
+	shuffle(colorList)
+}
+
+var nextColorIndex = 0
 
 func getImageId(imageName string) string {
 	ses := sh.NewSession()
@@ -40,7 +66,7 @@ func getContainerIPAddress(name string) string {
 func getContainerUniqueLabel(name string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels." + UniqueLabelName + "}}", name).Output()
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels."+UniqueLabelName+"}}", name).Output()
 	if err != nil {
 		return ""
 	}
@@ -230,7 +256,7 @@ func getRunArguments(set *ContainerSettings) []interface{} {
 		linkArgs = append(linkArgs, "--link", linkStr)
 	}
 
-	cmd := append([]interface{}{ "--name", set.Name}, toInterfaceSlice(set.Args)...)
+	cmd := append([]interface{}{"--name", set.Name}, toInterfaceSlice(set.Args)...)
 	cmd = append(cmd, linkArgs...)
 	cmd = append(cmd, imageName)
 	cmd = append(cmd, toInterfaceSlice(set.Command)...)
@@ -285,6 +311,46 @@ func DockerIp(settings *ProjectSettings) error {
 		ip := getContainerIPAddress(set.Name)
 		Info.Printf("%s: %s", set.Name, ip)
 	}
+	return nil
+}
+
+func nextColor() string {
+
+	defer func(){
+		nextColorIndex ++
+		if nextColorIndex > len(colorList) - 1 {
+			nextColorIndex = 0
+		}
+	}()
+	return colorList[nextColorIndex]
+}
+
+func DockerLogs(settings *ProjectSettings) error {
+	sort.Sort(settings.ContainerSettingsList)
+	var wg sync.WaitGroup
+	for _, set := range settings.ContainerSettingsList {
+
+		color := nextColor()
+		ses := sh.NewSession()
+		ses.Command("docker", "logs", "--tail", "1", "-f", set.Name)
+
+		ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
+		ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
+
+		if err := ses.Start(); err != nil {
+			Error.Println("Error getting log for " + set.Name + ": " + err.Error())
+			continue
+		}
+		wg.Add(1)
+
+		go func() {
+			ses.Wait()
+			wg.Done()
+		}()
+
+	}
+	wg.Wait()
+
 	return nil
 }
 

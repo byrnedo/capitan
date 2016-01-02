@@ -12,7 +12,7 @@ func main() {
 	app.Usage = "Deploy and orchestrate docker containers"
 
 	var (
-		command string
+		command    string
 		verboseLog bool
 		dryRun     bool
 	)
@@ -193,6 +193,19 @@ func main() {
 					Name:  "force,f",
 					Usage: "Force remove if container is running",
 				},
+			},
+		},
+		{
+			Name:    "log",
+			Aliases: []string{},
+			Usage:   "follow container logs",
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := DockerLogs(settings); err != nil {
+					Error.Println(err)
+					os.Exit(1)
+				}
+
 			},
 		},
 	}
