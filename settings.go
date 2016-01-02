@@ -10,22 +10,22 @@ import (
 	"unicode"
 )
 
-type FileRunner struct {
-	FilePath string
+type SettingsRunner struct {
+	Command string
 }
 
-func NewFileRunner(path string) *FileRunner {
-	return &FileRunner{
-		FilePath: path,
+func NewSettingsRunner(cmd string) *SettingsRunner {
+	return &SettingsRunner{
+		Command: cmd,
 	}
 }
 
-func (f *FileRunner) Run() (*ProjectSettings, error) {
+func (f *SettingsRunner) Run() (*ProjectSettings, error) {
 	var (
 		output []byte
 		err    error
 	)
-	if output, err = sh.Command(f.FilePath).Output(); err != nil {
+	if output, err = sh.Command(f.Command).Output(); err != nil {
 		return nil, err
 	}
 	settings, err := f.parseOutput(output)
@@ -33,7 +33,7 @@ func (f *FileRunner) Run() (*ProjectSettings, error) {
 
 }
 
-func (f *FileRunner) parseOutput(out []byte) (ProjectSettings, error) {
+func (f *SettingsRunner) parseOutput(out []byte) (ProjectSettings, error) {
 	lines := bytes.Split(out, []byte{'\n'})
 	settings, err := f.parseSettings(lines)
 	return settings, err
@@ -75,7 +75,7 @@ func (s SettingsList) Less(i, j int) bool {
 	return s[i].Placement < s[j].Placement
 }
 
-func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
+func (f *SettingsRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
 	//minimum of len1 at this point in parts
 
 	cmdsMap := make(map[string]ContainerSettings, 0)

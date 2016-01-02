@@ -5,12 +5,20 @@ Capitan is a tool for managing multiple Docker containers based largely on [crow
 Capitan is only a wrapper around the docker cli tool, no api usage whatsoever.
 This means it will basically work with all versions of docker.
 
-## Features
+## Why not docker-compose?
 
-- Bash Support
-- Hooks
-- Predictable run sequence
-- Future proof
+1. lack of variables
+2. options support is always behind actual docker version
+3. up restarts containers in wrong order
+4. no hooks system
+5. hasslefree replacement for non x86/x86_64 architectures
+
+## Capitan Features
+
+1. Shell Support - Config is read from stdout of a shell command. Extremely flexible
+2. Hooks - hooks for before and after every intrusive action
+3. Predictable run sequence - containers started in order defined
+4. Future proof - options are passed through to docker cli, very simple.
 
 ## Commands
 
@@ -37,17 +45,20 @@ This means it will basically work with all versions of docker.
 - `capitan rm`		Remove stopped containers
      
 ## Global options
-     --file, -f "./capitan.cfg.sh"	config file to read
-     --debug, -d				print extra log messages
-     --dry-run, --dry			preview outcome, no changes will be made
-     --help, -h				show help
-     --version, -v			print the version
+     --cmd, -c "./capitan.cfg.sh"	command used to obtain config
+     --debug, -d				    print extra log messages
+     --dry-run, --dry			    preview outcome, no changes will be made
+     --help, -h				        show help
+     --version, -v			        print the version
  
-## Config file
+## Configuration
 
-Services are described in the config file which is plane old bash. The config is then read from stdout.
+Services are described in the config output which is read from stdout.
+You could use any command which generates a valid config. It doesn't have to be a bash script like in the example.
 
-The format is:
+`capitan` by default runs the command `./capitan.cfg.sh` in the current directory to get the config. This can be customized with `-c` flag.
+
+The output format is:
 
     CONTAINER_NAME COMMAND ARGS
  
