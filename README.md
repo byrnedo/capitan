@@ -58,10 +58,10 @@ All commands are passed through to docker cli as `--COMMAND` EXCEPT the followin
 - `hook`: Allows for a custom shell command to be evaluated at the following points:
 
     - Before/After Run (`before.run`, `after.run`)
-    - Before/After Start (`before.run`, `after.run`)
-    - Before/After Stop (`before.run`, `after.run`)
-    - Before/After Kill (`before.run`, `after.run`)
-    - Before/After Rm (`before.run`, `after.run`)
+    - Before/After Start (`before.start`, `after.start`)
+    - Before/After Stop (`before.stop`, `after.stop`)
+    - Before/After Kill (`before.kill`, `after.kill`)
+    - Before/After Rm (`before.rm`, `after.rm`)
 
 - `global project`: The project name, defaults to current working directory
 
