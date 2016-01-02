@@ -24,21 +24,11 @@ var colorList = []string{
 	"blue",
 	"magenta",
 	"cyan",
-	"white",
 }
 
-func shuffle(a []string) {
-	for i := range a {
-		j := rand.Intn(i + 1)
-		a[i], a[j] = a[j], a[i]
-	}
-}
 
-func init(){
-	shuffle(colorList)
-}
 
-var nextColorIndex = 0
+var nextColorIndex = rand.Intn(len(colorList) - 1)
 
 func getImageId(imageName string) string {
 	ses := sh.NewSession()
@@ -315,10 +305,9 @@ func DockerIp(settings *ProjectSettings) error {
 }
 
 func nextColor() string {
-
 	defer func(){
 		nextColorIndex ++
-		if nextColorIndex > len(colorList) - 1 {
+		if nextColorIndex >= len(colorList) {
 			nextColorIndex = 0
 		}
 	}()

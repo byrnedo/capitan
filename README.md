@@ -13,7 +13,7 @@ This means it will basically work with all versions of docker.
 4. no hooks system
 5. hasslefree replacement for non x86/x86_64 architectures
 
-## Why no crowdr?
+## Why not crowdr?
 
 Written totally in bash. I love bash but I personally feel safer with go. That is all.
 
