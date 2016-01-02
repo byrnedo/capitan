@@ -347,15 +347,17 @@ func DockerLogs(settings *ProjectSettings) error {
 
 func DockerPs(settings *ProjectSettings) error {
 	sort.Sort(settings.ContainerSettingsList)
-	nameFilter := make([]string, 0)
+	args := make([]interface{}, 2, len(settings.ContainerSettingsList)*2 + 2)
+	args[0] = "ps"
+	args[1] = "-a"
 	for _, set := range settings.ContainerSettingsList {
-		nameFilter = append(nameFilter, "-f", "name="+set.Name)
+		args = append(args, "-f", "name="+set.Name)
 	}
 	var (
 		err error
 		out []byte
 	)
-	if out, err = runCmd("ps", "-a", "-f", nameFilter); err != nil {
+	if out, err = runCmd(args...); err != nil {
 		return err
 	}
 	Info.Print(string(out))
