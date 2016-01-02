@@ -15,9 +15,10 @@ This means it will basically work with all versions of docker.
 ## Commands
 
 - `capitan up`		Create then run or update containers 
-
-    - WARNING: If newer image is found it will remove the old container and run a new one
-    - If container is stopped it will start it
+    - Recreates if:
+        1. If newer image is found it will remove the old container and run a new one
+        2. Container config has changed
+    - Starts stopped containers
     
 - `capitan ps`		Show container status
 
