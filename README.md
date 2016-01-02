@@ -98,4 +98,3 @@ All commands are passed through to docker cli as `--COMMAND` EXCEPT the followin
     nats publish 4222
     EOF
 
-## CUR
