@@ -36,6 +36,8 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 
 - `capitan ip`		Show container ip addresses
 
+- `capitan log`     Follow container logs
+
 - `capitan build`   Build any containers with 'build' flag set (WIP)
 
 - `capitan start`   Start stopped containers
