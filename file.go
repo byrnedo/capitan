@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
 	"os"
@@ -47,6 +46,11 @@ type ProjectSettings struct {
 	ContainerSettingsList SettingsList
 }
 
+type Link struct {
+	Container string
+	Alias string
+}
+
 type ContainerSettings struct {
 	Name        string
 	Placement   int
@@ -54,7 +58,7 @@ type ContainerSettings struct {
 	Image       string
 	Build       string
 	Command     []interface{}
-	Depends     []string
+	Links       []Link
 	Hooks       map[string]string
 	UniqueLabel string
 }
@@ -101,9 +105,7 @@ func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings
 		if _, found := cmdsMap[container]; !found {
 			cmdsMap[container] = ContainerSettings{
 				Placement: len(cmdsMap),
-				Args:      make([]interface{}, 0),
-				Depends:   make([]string, 0),
-				Hooks:     make(map[string]string, 0),
+				Hooks: make(map[string]string, 0),
 			}
 		}
 
@@ -132,9 +134,21 @@ func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings
 				setting.Build = args
 			}
 		case "link":
-			Info.Println("Links not implemented yet")
-		case "depends":
-			setting.Depends = append(setting.Depends, args)
+
+			argParts := strings.SplitN(args, ":", 2)
+
+			var alias string
+			if len(argParts) > 1 {
+				alias = argParts[1]
+			}
+
+			newLink := Link{
+				Container: argParts[0],
+				Alias: alias,
+			}
+
+			setting.Links = append(setting.Links, newLink)
+
 		case "hook":
 			if len(args) > 0 {
 				curHooks := setting.Hooks
@@ -168,6 +182,10 @@ func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings
 	var count = 0
 	for name, item := range cmdsMap {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
+		for i, link := range item.Links {
+			link.Container = projSettings.ProjectName + projSettings.ProjectSeparator + link.Container
+			item.Links[i] = link
+		}
 		cmdsList[count] = item
 		count++
 	}

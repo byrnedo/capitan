@@ -117,7 +117,6 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 
 	for _, set := range settings.ContainerSettingsList {
 
-
 		if !exists(set.Name) {
 			if err := runContainer(&set, dryRun); err != nil {
 				return err
@@ -167,8 +166,24 @@ func runContainer(set *ContainerSettings, dryRun bool) error {
 	if err := runHook("before.run", set); err != nil {
 		return err
 	}
+
+	imageName := set.Name
+	if len(set.Image) > 0 {
+		imageName = set.Image
+	}
+
+	var linkArgs = make([]interface{}, 0, len(set.Links)*2)
+	for _, link := range set.Links {
+		linkStr := link.Container
+		if link.Alias != "" {
+			linkStr += ":" + link.Alias
+		}
+		linkArgs = append(linkArgs, "--link", linkStr)
+	}
+
 	cmd := append([]interface{}{"run", "-d", "-t", "--name", set.Name}, set.Args...)
-	cmd = append(cmd, set.Image)
+	cmd = append(cmd, linkArgs...)
+	cmd = append(cmd, imageName)
 	cmd = append(cmd, set.Command...)
 	if _, err := runCmd(cmd...); err != nil {
 		return err
@@ -335,6 +350,7 @@ func runHook(hookName string, settings *ContainerSettings) error {
 	ses = sh.NewSession()
 	ses.SetEnv("CAPITAN_CONTAINER_NAME", settings.Name)
 	ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
+
 	argVs = str.ToArgv(hookScript)
 	if len(argVs) > 1 {
 		ses.Command(argVs[0], toInterfaceSlice(argVs[1:])...)
