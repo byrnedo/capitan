@@ -355,7 +355,7 @@ func DockerPs(settings *ProjectSettings) error {
 		err error
 		out []byte
 	)
-	if out, err = runCmd("ps", "-a", nameFilter); err != nil {
+	if out, err = runCmd("ps", "-a", "-f", nameFilter); err != nil {
 		return err
 	}
 	Info.Print(string(out))
