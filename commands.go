@@ -279,7 +279,7 @@ func DockerStart(settings *ProjectSettings, dryRun bool) error {
 }
 
 func DockerRestart(settings *ProjectSettings, secBeforeKill int, dryRun bool) error {
-	sort.Reverse(settings.ContainerSettingsList)
+	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		Info.Println("Restarting " + set.Name)
 		if !dryRun {
@@ -363,7 +363,7 @@ func DockerPs(settings *ProjectSettings) error {
 }
 
 func DockerKill(settings *ProjectSettings, signal string, dryRun bool) error {
-	sort.Reverse(settings.ContainerSettingsList)
+	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !isRunning(set.Name) {
 			Info.Println(set.Name, "already dead")
@@ -386,7 +386,7 @@ func DockerKill(settings *ProjectSettings, signal string, dryRun bool) error {
 }
 
 func DockerStop(settings *ProjectSettings, secBeforeKill int, dryRun bool) error {
-	sort.Reverse(settings.ContainerSettingsList)
+	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !isRunning(set.Name) {
 			Info.Println(set.Name, "already dead")
@@ -409,7 +409,7 @@ func DockerStop(settings *ProjectSettings, secBeforeKill int, dryRun bool) error
 }
 
 func DockerRm(settings *ProjectSettings, force bool, dryRun bool) error {
-	sort.Reverse(settings.ContainerSettingsList)
+	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		var forceStr = "--force=false"
 		if force {
