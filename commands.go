@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const UniqueLabelName = "capitanRunCmd"
+
 func getImageId(imageName string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -32,6 +34,18 @@ func getContainerIPAddress(name string) string {
 	}
 	ip := strings.Trim(string(out), " \n")
 	return ip
+
+}
+
+func getContainerUniqueLabel(name string) string {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels." + UniqueLabelName + "}}", name).Output()
+	if err != nil {
+		return ""
+	}
+	label := strings.Trim(string(out), " \n")
+	return label
 
 }
 
@@ -141,6 +155,21 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 				}
 				continue
 			}
+			uniqueLabel := fmt.Sprintf("%s", getRunArguments(&set))
+			if getContainerUniqueLabel(set.Name) != uniqueLabel {
+				// remove and restart
+				Info.Println("Removing (run arguments changed):", set.Name)
+				if !dryRun {
+					if _, err := runCmd("rm", "-f", set.Name); err != nil {
+						return err
+					}
+				}
+
+				if err := runContainer(&set, dryRun); err != nil {
+					return err
+				}
+				continue
+			}
 		}
 
 		if isRunning(set.Name) {
@@ -167,6 +196,20 @@ func runContainer(set *ContainerSettings, dryRun bool) error {
 		return err
 	}
 
+	cmd := getRunArguments(set)
+	uniqueLabel := UniqueLabelName + "=" + fmt.Sprintf("%s", cmd)
+	if _, err := runCmd(append([]interface{}{"run", "-d", "-t", "--label", uniqueLabel}, cmd...)...); err != nil {
+		return err
+	}
+
+	if err := runHook("after.run", set); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getRunArguments(set *ContainerSettings) []interface{} {
 	imageName := set.Name
 	if len(set.Image) > 0 {
 		imageName = set.Image
@@ -181,19 +224,11 @@ func runContainer(set *ContainerSettings, dryRun bool) error {
 		linkArgs = append(linkArgs, "--link", linkStr)
 	}
 
-	cmd := append([]interface{}{"run", "-d", "-t", "--name", set.Name}, set.Args...)
+	cmd := append([]interface{}{ "--name", set.Name}, toInterfaceSlice(set.Args)...)
 	cmd = append(cmd, linkArgs...)
 	cmd = append(cmd, imageName)
-	cmd = append(cmd, set.Command...)
-	if _, err := runCmd(cmd...); err != nil {
-		return err
-	}
-
-	if err := runHook("after.run", set); err != nil {
-		return err
-	}
-
-	return nil
+	cmd = append(cmd, toInterfaceSlice(set.Command)...)
+	return cmd
 }
 
 func DockerStart(settings *ProjectSettings, dryRun bool) error {
@@ -360,6 +395,14 @@ func runHook(hookName string, settings *ContainerSettings) error {
 	ses.Stdout = os.Stdout
 	ses.Stderr = os.Stderr
 	return ses.Run()
+}
+
+func toStringSlice(data []interface{}) (out []string) {
+	out = make([]string, len(data))
+	for i, item := range data {
+		out[i] = fmt.Sprintf("%s", item)
+	}
+	return
 }
 
 func toInterfaceSlice(data []string) (out []interface{}) {

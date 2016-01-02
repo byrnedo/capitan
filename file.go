@@ -48,16 +48,16 @@ type ProjectSettings struct {
 
 type Link struct {
 	Container string
-	Alias string
+	Alias     string
 }
 
 type ContainerSettings struct {
 	Name        string
 	Placement   int
-	Args        []interface{}
+	Args        []string
 	Image       string
 	Build       string
-	Command     []interface{}
+	Command     []string
 	Links       []Link
 	Hooks       map[string]string
 	UniqueLabel string
@@ -105,7 +105,7 @@ func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings
 		if _, found := cmdsMap[container]; !found {
 			cmdsMap[container] = ContainerSettings{
 				Placement: len(cmdsMap),
-				Hooks: make(map[string]string, 0),
+				Hooks:     make(map[string]string, 0),
 			}
 		}
 
@@ -144,7 +144,7 @@ func (f *FileRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings
 
 			newLink := Link{
 				Container: argParts[0],
-				Alias: alias,
+				Alias:     alias,
 			}
 
 			setting.Links = append(setting.Links, newLink)
