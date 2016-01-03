@@ -7,11 +7,11 @@ import (
 	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"sort"
 	"strings"
 	"sync"
-"math/rand"
 )
 
 const UniqueLabelName = "capitanRunCmd"
@@ -26,10 +26,9 @@ var colorList = []string{
 	"cyan",
 }
 
-
-
 var nextColorIndex = rand.Intn(len(colorList) - 1)
 
+//Get the id for a given image name
 func getImageId(imageName string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -41,18 +40,8 @@ func getImageId(imageName string) string {
 	return imageId
 }
 
-func getContainerIPAddress(name string) string {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.NetworkSettings.IPAddress}}", name).Output()
-	if err != nil {
-		return ""
-	}
-	ip := strings.Trim(string(out), " \n")
-	return ip
-
-}
-
+// Get the value of the label used to record the run
+// arguments used when creating the container
 func getContainerUniqueLabel(name string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -65,6 +54,7 @@ func getContainerUniqueLabel(name string) string {
 
 }
 
+// Get the image id for a given container
 func getContainerImageId(name string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -77,7 +67,8 @@ func getContainerImageId(name string) string {
 
 }
 
-func exists(name string) bool {
+// Checks if a container exists
+func containerExists(name string) bool {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--format", "{{.State.Running}}", name).Output()
@@ -91,6 +82,7 @@ func exists(name string) bool {
 
 }
 
+// Check if a container is running
 func isRunning(name string) bool {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -104,6 +96,7 @@ func isRunning(name string) bool {
 	return false
 }
 
+// Helper to run a docker command
 func runCmd(args ...interface{}) ([]byte, error) {
 	ses := sh.NewSession()
 
@@ -119,7 +112,8 @@ func runCmd(args ...interface{}) ([]byte, error) {
 	return out, nil
 }
 
-func DockerBuild(settings *ProjectSettings, dryRun bool) error {
+// The build command
+func (settings *ProjectSettings) CapitanBuild(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
 		if len(set.Build) == 0 {
@@ -127,13 +121,7 @@ func DockerBuild(settings *ProjectSettings, dryRun bool) error {
 		}
 		Info.Println("Building " + set.Name)
 		if !dryRun {
-			if err := runHook("before.build", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
-				return err
-			}
-			if err := runHook("after.build", &set); err != nil {
+			if err := set.BuildImage(); err != nil {
 				return err
 			}
 		}
@@ -142,13 +130,34 @@ func DockerBuild(settings *ProjectSettings, dryRun bool) error {
 	return nil
 }
 
-func DockerUp(settings *ProjectSettings, dryRun bool) error {
+// Builds an image for a container
+func (set *ContainerSettings) BuildImage() error {
+	if err := runHook("before.build", set); err != nil {
+		return err
+	}
+	if _, err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
+		return err
+	}
+	if err := runHook("after.build", set); err != nil {
+		return err
+	}
+	return nil
+}
+
+// The 'up' command
+//
+// Creates a container if it doesn't exist
+// Starts a container if stopped
+// Recreates a container if the container's image has a newer id locally
+// OR if the command used to create the container is now changed (i.e.
+// config has changed.
+func (settings *ProjectSettings) DockerUp(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 
 	for _, set := range settings.ContainerSettingsList {
 
-		if !exists(set.Name) {
-			if err := runContainer(&set, dryRun); err != nil {
+		if !containerExists(set.Name) {
+			if err := set.Run(dryRun); err != nil {
 				return err
 			}
 			continue
@@ -161,27 +170,27 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 				// remove and restart
 				Info.Println("Removing (different image available):", set.Name)
 				if !dryRun {
-					if _, err := runCmd("rm", "-f", set.Name); err != nil {
+					if err := set.Rm(true); err != nil {
 						return err
 					}
 				}
 
-				if err := runContainer(&set, dryRun); err != nil {
+				if err := set.Run(dryRun); err != nil {
 					return err
 				}
 				continue
 			}
-			uniqueLabel := fmt.Sprintf("%s", getRunArguments(&set))
+			uniqueLabel := fmt.Sprintf("%s", set.GetRunArguments())
 			if getContainerUniqueLabel(set.Name) != uniqueLabel {
 				// remove and restart
 				Info.Println("Removing (run arguments changed):", set.Name)
 				if !dryRun {
-					if _, err := runCmd("rm", "-f", set.Name); err != nil {
+					if err := set.Rm(true); err != nil {
 						return err
 					}
 				}
 
-				if err := runContainer(&set, dryRun); err != nil {
+				if err := set.Run(dryRun); err != nil {
 					return err
 				}
 				continue
@@ -195,13 +204,7 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 			if dryRun {
 				continue
 			}
-			if err := runHook("before.start", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("start", set.Name); err != nil {
-				return err
-			}
-			if err := runHook("after.start", &set); err != nil {
+			if err := set.Start(); err != nil {
 				return err
 			}
 		}
@@ -211,7 +214,8 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 	return nil
 }
 
-func runContainer(set *ContainerSettings, dryRun bool) error {
+// Run a container
+func (set *ContainerSettings) Run(dryRun bool) error {
 
 	Info.Println("Running " + set.Name)
 	if dryRun {
@@ -221,7 +225,7 @@ func runContainer(set *ContainerSettings, dryRun bool) error {
 		return err
 	}
 
-	cmd := getRunArguments(set)
+	cmd := set.GetRunArguments()
 	uniqueLabel := UniqueLabelName + "=" + fmt.Sprintf("%s", cmd)
 	if _, err := runCmd(append([]interface{}{"run", "-d", "-t", "--label", uniqueLabel}, cmd...)...); err != nil {
 		return err
@@ -234,7 +238,8 @@ func runContainer(set *ContainerSettings, dryRun bool) error {
 	return nil
 }
 
-func getRunArguments(set *ContainerSettings) []interface{} {
+// Create docker arg slice from container options
+func (set *ContainerSettings) GetRunArguments() []interface{} {
 	imageName := set.Name
 	if len(set.Image) > 0 {
 		imageName = set.Image
@@ -256,7 +261,8 @@ func getRunArguments(set *ContainerSettings) []interface{} {
 	return cmd
 }
 
-func DockerStart(settings *ProjectSettings, dryRun bool) error {
+// Starts stopped containers
+func (settings *ProjectSettings) DockerStart(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
 		if isRunning(set.Name) {
@@ -265,13 +271,7 @@ func DockerStart(settings *ProjectSettings, dryRun bool) error {
 		}
 		Info.Println("Starting " + set.Name)
 		if !dryRun {
-			if err := runHook("before.start", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("start", set.Name); err != nil {
-				return err
-			}
-			if err := runHook("after.start", &set); err != nil {
+			if err := set.Start(); err != nil {
 				return err
 			}
 		}
@@ -279,18 +279,27 @@ func DockerStart(settings *ProjectSettings, dryRun bool) error {
 	return nil
 }
 
-func DockerRestart(settings *ProjectSettings, secBeforeKill int, dryRun bool) error {
+// Start a given container
+func (set *ContainerSettings) Start() error {
+	if err := runHook("before.start", set); err != nil {
+		return err
+	}
+	if _, err := runCmd("start", set.Name); err != nil {
+		return err
+	}
+	if err := runHook("after.start", set); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Command to restart all containers
+func (settings *ProjectSettings) DockerRestart(secBeforeKill int, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		Info.Println("Restarting " + set.Name)
 		if !dryRun {
-			if err := runHook("before.restart", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("restart", "--time", fmt.Sprintf("%d", secBeforeKill), set.Name); err != nil {
-				return err
-			}
-			if err := runHook("after.restart", &set); err != nil {
+			if err := set.Restart(secBeforeKill); err != nil {
 				return err
 			}
 		}
@@ -298,18 +307,46 @@ func DockerRestart(settings *ProjectSettings, secBeforeKill int, dryRun bool) er
 	return nil
 }
 
-func DockerIp(settings *ProjectSettings) error {
+// Restart the container
+func (set *ContainerSettings) Restart(secBeforeKill int) error {
+	if err := runHook("before.restart", set); err != nil {
+		return err
+	}
+	if _, err := runCmd("restart", "--time", fmt.Sprintf("%d", secBeforeKill), set.Name); err != nil {
+		return err
+	}
+	if err := runHook("after.restart", set); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Print all container IPs
+func (settings *ProjectSettings) DockerIP() error {
 	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
-		ip := getContainerIPAddress(set.Name)
+		ip := set.IP()
 		Info.Printf("%s: %s", set.Name, ip)
 	}
 	return nil
 }
 
+// Returns a containers IP
+func (set *ContainerSettings) IP() string {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.NetworkSettings.IPAddress}}", set.Name).Output()
+	if err != nil {
+		return ""
+	}
+	ip := strings.Trim(string(out), " \n")
+	return ip
+}
+
+// Get the next color to be used in log output
 func nextColor() string {
-	defer func(){
-		nextColorIndex ++
+	defer func() {
+		nextColorIndex++
 		if nextColorIndex >= len(colorList) {
 			nextColorIndex = 0
 		}
@@ -317,22 +354,20 @@ func nextColor() string {
 	return colorList[nextColorIndex]
 }
 
-func DockerLogs(settings *ProjectSettings) error {
+// Stream all container logs
+func (settings *ProjectSettings) DockerLogs() error {
 	sort.Sort(settings.ContainerSettingsList)
 	var wg sync.WaitGroup
 	for _, set := range settings.ContainerSettingsList {
-
-		color := nextColor()
-		ses := sh.NewSession()
-		ses.Command("docker", "logs", "--tail", "1", "-f", set.Name)
-
-		ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
-		ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
-
-		if err := ses.Start(); err != nil {
+		var (
+			ses *sh.Session
+			err error
+		)
+		if ses, err = set.Log(); err != nil {
 			Error.Println("Error getting log for " + set.Name + ": " + err.Error())
 			continue
 		}
+
 		wg.Add(1)
 
 		go func() {
@@ -342,13 +377,26 @@ func DockerLogs(settings *ProjectSettings) error {
 
 	}
 	wg.Wait()
-
 	return nil
 }
 
-func DockerPs(settings *ProjectSettings) error {
+// Start streaming a container's logs
+func (set *ContainerSettings) Log() (*sh.Session, error) {
+	color := nextColor()
+	ses := sh.NewSession()
+	ses.Command("docker", "logs", "--tail", "1", "-f", set.Name)
+
+	ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
+	ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
+
+	err := ses.Start()
+	return ses, err
+}
+
+// Print `docker ps` ouptut for all containers in project
+func (settings *ProjectSettings) DockerPs() error {
 	sort.Sort(settings.ContainerSettingsList)
-	args := make([]interface{}, 2, len(settings.ContainerSettingsList)*2 + 2)
+	args := make([]interface{}, 2, len(settings.ContainerSettingsList)*2+2)
 	args[0] = "ps"
 	args[1] = "-a"
 	for _, set := range settings.ContainerSettingsList {
@@ -365,7 +413,8 @@ func DockerPs(settings *ProjectSettings) error {
 	return nil
 }
 
-func DockerKill(settings *ProjectSettings, signal string, dryRun bool) error {
+// Kill all running containers in project
+func (settings *ProjectSettings) DockerKill(signal string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !isRunning(set.Name) {
@@ -374,13 +423,7 @@ func DockerKill(settings *ProjectSettings, signal string, dryRun bool) error {
 		}
 		Info.Println("Killing " + set.Name)
 		if !dryRun {
-			if err := runHook("before.kill", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("kill", "--signal", signal, set.Name); err != nil {
-				return err
-			}
-			if err := runHook("after.kill", &set); err != nil {
+			if err := set.Kill(signal); err != nil {
 				return err
 			}
 		}
@@ -388,7 +431,23 @@ func DockerKill(settings *ProjectSettings, signal string, dryRun bool) error {
 	return nil
 }
 
-func DockerStop(settings *ProjectSettings, secBeforeKill int, dryRun bool) error {
+// Kills the container
+func (set *ContainerSettings) Kill(signal string) error {
+	if err := runHook("before.kill", set); err != nil {
+		return err
+	}
+	if _, err := runCmd("kill", "--signal", signal, set.Name); err != nil {
+		return err
+	}
+	if err := runHook("after.kill", set); err != nil {
+		return err
+	}
+	return nil
+
+}
+
+// Stops the containers in the project
+func (settings *ProjectSettings) DockerStop(secBeforeKill int, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !isRunning(set.Name) {
@@ -397,13 +456,7 @@ func DockerStop(settings *ProjectSettings, secBeforeKill int, dryRun bool) error
 		}
 		Info.Println("Stopping " + set.Name)
 		if !dryRun {
-			if err := runHook("before.stop", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("stop", "--time", fmt.Sprintf("%d", secBeforeKill), set.Name); err != nil {
-				return err
-			}
-			if err := runHook("after.stop", &set); err != nil {
+			if err := set.Stop(secBeforeKill); err != nil {
 				return err
 			}
 		}
@@ -411,23 +464,29 @@ func DockerStop(settings *ProjectSettings, secBeforeKill int, dryRun bool) error
 	return nil
 }
 
-func DockerRm(settings *ProjectSettings, force bool, dryRun bool) error {
+// Stops the container
+func (set *ContainerSettings) Stop(secBeforeKill int) error {
+
+	if err := runHook("before.stop", set); err != nil {
+		return err
+	}
+	if _, err := runCmd("stop", "--time", fmt.Sprintf("%d", secBeforeKill), set.Name); err != nil {
+		return err
+	}
+	if err := runHook("after.stop", set); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Remove all containers in project
+func (settings *ProjectSettings) DockerRm(force bool, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
-		var forceStr = "--force=false"
-		if force {
-			forceStr = "--force=true"
-		}
 
 		Info.Println("Removing " + set.Name)
-		if !dryRun && exists(set.Name) {
-			if err := runHook("before.rm", &set); err != nil {
-				return err
-			}
-			if _, err := runCmd("rm", forceStr, set.Name); err != nil {
-				return err
-			}
-			if err := runHook("after.rm", &set); err != nil {
+		if !dryRun && containerExists(set.Name) {
+			if err := set.Rm(force); err != nil {
 				return err
 			}
 		}
@@ -435,6 +494,27 @@ func DockerRm(settings *ProjectSettings, force bool, dryRun bool) error {
 	return nil
 }
 
+// Removes the container
+func (set *ContainerSettings) Rm(force bool) error {
+
+	var forceStr = "--force=false"
+	if force {
+		forceStr = "--force=true"
+	}
+
+	if err := runHook("before.rm", set); err != nil {
+		return err
+	}
+	if _, err := runCmd("rm", forceStr, set.Name); err != nil {
+		return err
+	}
+	if err := runHook("after.rm", set); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Runs a hook command if it exists for a specific container
 func runHook(hookName string, settings *ContainerSettings) error {
 	var (
 		hookScript string

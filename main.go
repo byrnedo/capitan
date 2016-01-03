@@ -58,7 +58,7 @@ func main() {
 			Usage:   "Create then run or update containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerUp(settings, dryRun); err != nil {
+				if err := settings.DockerUp(dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -71,7 +71,7 @@ func main() {
 			Usage:   "Show container status",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerPs(settings); err != nil {
+				if err := settings.DockerPs(); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -84,7 +84,7 @@ func main() {
 			Usage:   "Show container ip addresses",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerIp(settings); err != nil {
+				if err := settings.DockerIP(); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -97,7 +97,7 @@ func main() {
 			Usage:   "Build any containers with 'build' flag set",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerBuild(settings, dryRun); err != nil {
+				if err := settings.CapitanBuild(dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -110,7 +110,7 @@ func main() {
 			Usage:   "Start stopped containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerStart(settings, dryRun); err != nil {
+				if err := settings.DockerStart(dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -123,7 +123,7 @@ func main() {
 			Usage:   "Restart containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerRestart(settings, c.Int("time"), dryRun); err != nil {
+				if err := settings.DockerRestart(c.Int("time"), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -143,7 +143,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := DockerStop(settings, c.Int("time"), dryRun); err != nil {
+				if err := settings.DockerStop(c.Int("time"), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -163,7 +163,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := DockerKill(settings, c.String("signal"), dryRun); err != nil {
+				if err := settings.DockerKill(c.String("signal"), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -183,7 +183,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := DockerRm(settings, c.Bool("force"), dryRun); err != nil {
+				if err := settings.DockerRm(c.Bool("force"), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -201,7 +201,7 @@ func main() {
 			Usage:   "follow container logs",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := DockerLogs(settings); err != nil {
+				if err := settings.DockerLogs(); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -209,7 +209,6 @@ func main() {
 			},
 		},
 	}
-
 	app.Run(os.Args)
 }
 
@@ -219,7 +218,7 @@ func getSettings(settingsCmd string) (settings *ProjectSettings) {
 	)
 	runner := NewSettingsRunner(settingsCmd)
 	if settings, err = runner.Run(); err != nil {
-		Error.Printf("Error running file: %s\n", err)
+		Error.Printf("Error running command: %s\n", err)
 		os.Exit(1)
 	}
 	return settings

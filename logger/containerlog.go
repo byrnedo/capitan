@@ -1,13 +1,13 @@
 package logger
 
 import (
-	"log"
 	"bytes"
 	"github.com/mgutz/ansi"
-"io"
+	"io"
+	"log"
 )
 
-type ContainerLogWriter struct{
+type ContainerLogWriter struct {
 	*log.Logger
 	colorCode []byte
 }
@@ -20,18 +20,16 @@ func NewContainerLogWriter(out io.Writer, containerName string, color string) *C
 		ansi.Color(containerName+" | ", color),
 		0)
 	return &ContainerLogWriter{
-		Logger: conOut,
+		Logger:    conOut,
 		colorCode: []byte(ansi.ColorCode(color)),
 	}
 }
 
 func (w *ContainerLogWriter) Write(b []byte) (int, error) {
-	for _, row := range bytes.Split(b, []byte{'\r','\n'}) {
+	for _, row := range bytes.Split(b, []byte{'\r', '\n'}) {
 		if len(row) > 0 {
 			w.Printf("%s%s%s", w.colorCode, bytes.Trim(row, " "), resetCode)
 		}
 	}
 	return len(b), nil
 }
-
-

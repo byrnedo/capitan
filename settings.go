@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 	"unicode"
+	"errors"
 )
 
 type SettingsRunner struct {
@@ -24,8 +25,21 @@ func (f *SettingsRunner) Run() (*ProjectSettings, error) {
 	var (
 		output []byte
 		err    error
+		cmdSlice []string
+		cmdArgs []interface{}
+
 	)
-	if output, err = sh.Command(f.Command).Output(); err != nil {
+	if len(f.Command) == 0 {
+		return nil, errors.New("Command must not be empty")
+	}
+
+	if cmdSlice = str.ToArgv(f.Command); len(cmdSlice) > 1 {
+		cmdArgs = toInterfaceSlice(cmdSlice[1:])
+	} else {
+		cmdArgs = []interface{}{}
+	}
+
+	if output, err = sh.Command(cmdSlice[0], cmdArgs...).Output(); err != nil {
 		return nil, err
 	}
 	settings, err := f.parseOutput(output)
