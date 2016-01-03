@@ -192,13 +192,14 @@ func DockerUp(settings *ProjectSettings, dryRun bool) error {
 			Info.Println("Already running:", set.Name)
 		} else {
 			Info.Println("Starting " + set.Name)
+			if dryRun {
+				continue
+			}
 			if err := runHook("before.start", &set); err != nil {
 				return err
 			}
-			if !dryRun {
-				if _, err := runCmd("start", set.Name); err != nil {
-					return err
-				}
+			if _, err := runCmd("start", set.Name); err != nil {
+				return err
 			}
 			if err := runHook("after.start", &set); err != nil {
 				return err
