@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>Capitan by byrnedo</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>Capitan</h1>
+        <h2>Capitan is a tool for managing multiple Docker containers</h2>
+        <a href="https://github.com/byrnedo/capitan" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>
+<a id="capitan" class="anchor" href="#capitan" aria-hidden="true"><span class="octicon octicon-link"></span></a>Capitan</h1>
+
+<p>Capitan is a tool for managing multiple Docker containers based largely on <a href="https://github.com/polonskiy/crowdr">crowdr</a></p>
+
+<p>Capitan is only a wrapper around the docker cli tool, no api usage whatsoever.
+This means it will basically work with all versions of docker.</p>
+
+<h2>
+<a id="why-not-docker-compose" class="anchor" href="#why-not-docker-compose" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why not docker-compose?</h2>
+
+<ol>
+<li>lack of variables</li>
+<li>options support is always behind actual docker version</li>
+<li>up restarts containers in wrong order</li>
+<li>no hooks system</li>
+<li>hasslefree replacement for non x86/x86_64 architectures</li>
+</ol>
+
+<h2>
+<a id="why-not-crowdr" class="anchor" href="#why-not-crowdr" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why not crowdr?</h2>
+
+<p>Written totally in bash. I love bash but I personally feel safer with go. That is all.</p>
+
+<h2>
+<a id="capitan-features" class="anchor" href="#capitan-features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Capitan Features</h2>
+
+<ol>
+<li>Shell Support - Config is read from stdout of a shell command. Extremely flexible</li>
+<li>Hooks - hooks for before and after every intrusive action</li>
+<li>Predictable run sequence - containers started in order defined</li>
+<li>Future proof - options are passed through to docker cli, very simple.</li>
+</ol>
+
+<h2>
+<a id="commands" class="anchor" href="#commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Commands</h2>
+
+<ul>
+<li>
+<p><code>capitan up</code>      Create then run or update containers </p>
+
+<ul>
+<li>Recreates if:
+
+<ol>
+<li>If newer image is found it will remove the old container and run a new one</li>
+<li>Container config has changed</li>
+</ol>
+</li>
+<li>Starts stopped containers</li>
+</ul>
+</li>
+<li><p><code>capitan ps</code>      Show container status</p></li>
+<li><p><code>capitan ip</code>      Show container ip addresses</p></li>
+<li><p><code>capitan log</code>     Follow container logs</p></li>
+<li><p><code>capitan build</code>   Build any containers with 'build' flag set (WIP)</p></li>
+<li><p><code>capitan start</code>   Start stopped containers</p></li>
+<li><p><code>capitan restart</code> Restart containers</p></li>
+<li><p><code>capitan stop</code>    Stop running containers</p></li>
+<li><p><code>capitan kill</code>    Kill running containers using SIGKILL or a specified signal</p></li>
+<li><p><code>capitan rm</code>      Remove stopped containers</p></li>
+</ul>
+
+<h2>
+<a id="global-options" class="anchor" href="#global-options" aria-hidden="true"><span class="octicon octicon-link"></span></a>Global options</h2>
+
+<pre><code> --cmd, -c "./capitan.cfg.sh"   command used to obtain config
+ --debug, -d                    print extra log messages
+ --dry-run, --dry               preview outcome, no changes will be made
+ --help, -h                     show help
+ --version, -v                  print the version
+</code></pre>
+
+<h2>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h2>
+
+<p>Services are described in the config output which is read from stdout.
+You could use any command which generates a valid config. It doesn't have to be a bash script like in the example.</p>
+
+<p><code>capitan</code> by default runs the command <code>./capitan.cfg.sh</code> in the current directory to get the config. This can be customized with <code>-c</code> flag.</p>
+
+<p>The output format is:</p>
+
+<pre><code>CONTAINER_NAME COMMAND ARGS
+</code></pre>
+
+<p>All commands are passed through to docker cli as <code>--COMMAND</code> EXCEPT the following:</p>
+
+<ul>
+<li><p><code>build</code>: This allows a path to be given for a dockerfile.</p></li>
+<li>
+<p><code>hook</code>: Allows for a custom shell command to be evaluated at the following points:</p>
+
+<ul>
+<li>Before/After Run (<code>before.run</code>, <code>after.run</code>)</li>
+<li>Before/After Start (<code>before.start</code>, <code>after.start</code>)</li>
+<li>Before/After Stop (<code>before.stop</code>, <code>after.stop</code>)</li>
+<li>Before/After Kill (<code>before.kill</code>, <code>after.kill</code>)</li>
+<li>Before/After Rm (<code>before.rm</code>, <code>after.rm</code>)</li>
+</ul>
+</li>
+<li><p><code>global project</code>: The project name, defaults to current working directory</p></li>
+<li><p><code>global project_sep</code>: String to use to create container name from <code>project</code> and name specified in config</p></li>
+</ul>
+
+<h3>
+<a id="example-config-" class="anchor" href="#example-config-" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example Config :</h3>
+
+<pre><code>#!/bin/bash
+PREFIX=dev
+
+cat &lt;&lt;EOF
+#
+# General redis container
+#
+redis image redis:latest
+redis hostname ${PREFIX}_redis
+redis publish 6379
+redis hook after.run sleep 10
+
+#
+# General mongodb container
+#
+mongo image mongo:latest
+mongo command mongod --smallfiles
+mongo hostname ${PREFIX}_mongo
+mongo publish 27017
+
+#
+# General nats container
+#
+nats image nats:latest
+nats hostname ${PREFIX}_nats
+nats publish 4222
+EOF
+</code></pre>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/byrnedo/capitan/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/byrnedo/capitan/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/byrnedo/capitan"></a> is maintained by <a href="https://github.com/byrnedo">byrnedo</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>
