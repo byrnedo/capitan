@@ -5,13 +5,15 @@ import (
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
-	"github.com/mgutz/str"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"sort"
 	"strings"
+	"os/signal"
 	"sync"
+	"github.com/mgutz/str"
+	"syscall"
 )
 
 const UniqueLabelName = "capitanRunCmd"
@@ -27,6 +29,18 @@ var colorList = []string{
 }
 
 var nextColorIndex = rand.Intn(len(colorList) - 1)
+
+// Get the next color to be used in log output
+func nextColor() string {
+	defer func() {
+		nextColorIndex++
+		if nextColorIndex >= len(colorList) {
+			nextColorIndex = 0
+		}
+	}()
+	return colorList[nextColorIndex]
+}
+
 
 //Get the id for a given image name
 func getImageId(imageName string) string {
@@ -154,12 +168,24 @@ func (set *ContainerSettings) BuildImage() error {
 func (settings *ProjectSettings) DockerUp(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 
+	wg := sync.WaitGroup{}
 	for _, set := range settings.ContainerSettingsList {
 
 		if !containerExists(set.Name) {
-			if err := set.Run(dryRun); err != nil {
+			var(
+				ses *sh.Session
+				err error
+			)
+
+			if ses, err = set.Run(dryRun); err != nil {
 				return err
 			}
+			wg.Add(1)
+
+			go func(){
+				ses.Wait()
+				wg.Done()
+			}()
 			continue
 		}
 
@@ -175,9 +201,21 @@ func (settings *ProjectSettings) DockerUp(dryRun bool) error {
 					}
 				}
 
-				if err := set.Run(dryRun); err != nil {
+				var(
+					ses *sh.Session
+					err error
+				)
+
+				if ses, err = set.Run(dryRun); err != nil {
 					return err
 				}
+				wg.Add(1)
+
+				go func(){
+					ses.Wait()
+					wg.Done()
+				}()
+
 				continue
 			}
 			uniqueLabel := fmt.Sprintf("%s", set.GetRunArguments())
@@ -189,10 +227,21 @@ func (settings *ProjectSettings) DockerUp(dryRun bool) error {
 						return err
 					}
 				}
+				var(
+					ses *sh.Session
+					err error
+				)
 
-				if err := set.Run(dryRun); err != nil {
+				if ses, err = set.Run(dryRun); err != nil {
 					return err
 				}
+				wg.Add(1)
+
+				go func(){
+					ses.Wait()
+					wg.Done()
+				}()
+
 				continue
 			}
 		}
@@ -211,31 +260,55 @@ func (settings *ProjectSettings) DockerUp(dryRun bool) error {
 		continue
 
 	}
+	wg.Wait()
 	return nil
 }
 
 // Run a container
-func (set *ContainerSettings) Run(dryRun bool) error {
+func (set *ContainerSettings) Run(dryRun bool) (*sh.Session, error) {
 
 	Info.Println("Running " + set.Name)
 	if dryRun {
-		return nil
+		return nil, nil
 	}
 	if err := runHook("before.run", set); err != nil {
-		return err
+		return nil, err
 	}
 
 	cmd := set.GetRunArguments()
 	uniqueLabel := UniqueLabelName + "=" + fmt.Sprintf("%s", cmd)
-	if _, err := runCmd(append([]interface{}{"run", "-d", "-t", "--label", uniqueLabel}, cmd...)...); err != nil {
-		return err
+	cmd = append([]interface{}{"run", "-t", "--label", uniqueLabel}, cmd...)
+
+	ses := sh.NewSession()
+
+	if logger.GetLevel() == DebugLevel {
+		ses.ShowCMD = true
 	}
+
+	color := nextColor()
+	ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
+	ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
+
+	if err := ses.Command("docker", cmd...).Start(); err != nil {
+		return ses, err
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func(){
+		for _ = range c {
+			Info.Println("Killing ", set.Name, "...")
+			if err := set.Kill(nil); err != nil {
+				Error.Println("Failed to kill", set.Name, ":", err.Error())
+			}
+		}
+	}()
 
 	if err := runHook("after.run", set); err != nil {
-		return err
+		return ses, err
 	}
 
-	return nil
+	return ses, nil
 }
 
 // Create docker arg slice from container options
@@ -343,17 +416,6 @@ func (set *ContainerSettings) IP() string {
 	}
 	ip := strings.Trim(string(out), " \n")
 	return ip
-}
-
-// Get the next color to be used in log output
-func nextColor() string {
-	defer func() {
-		nextColorIndex++
-		if nextColorIndex >= len(colorList) {
-			nextColorIndex = 0
-		}
-	}()
-	return colorList[nextColorIndex]
 }
 
 // Stream all container logs
