@@ -31,6 +31,8 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
         1. If newer image is found it will remove the old container and run a new one
         2. Container config has changed
     - Starts stopped containers
+
+    - Optionally can attach to output using `--attach|-a` flag. NOTE this doesn't allow you to kill containers by Ctrl-C yet.
     
 - `capitan ps`		Show container status
     

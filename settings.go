@@ -66,6 +66,17 @@ type Link struct {
 	Alias     string
 }
 
+type AppliedAction string
+
+const (
+	Run AppliedAction = "run"
+	Start AppliedAction = "start"
+	Stop AppliedAction = "stop"
+	Kill AppliedAction = "kill"
+	Restart AppliedAction = "restart"
+	Remove AppliedAction = "remove"
+)
+
 type ContainerSettings struct {
 	Name        string
 	Placement   int
@@ -75,6 +86,7 @@ type ContainerSettings struct {
 	Command     []string
 	Links       []Link
 	Hooks       map[string]string
+	Action       AppliedAction // used in commands
 	UniqueLabel string
 }
 
