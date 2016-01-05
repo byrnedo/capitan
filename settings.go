@@ -39,7 +39,8 @@ func (f *SettingsRunner) Run() (*ProjectSettings, error) {
 		cmdArgs = []interface{}{}
 	}
 
-	if output, err = sh.Command(cmdSlice[0], cmdArgs...).Output(); err != nil {
+	ses := sh.NewSession()
+	if output, err = ses.Command(cmdSlice[0], cmdArgs...).Output(); err != nil {
 		return nil, err
 	}
 	settings, err := f.parseOutput(output)
@@ -219,7 +220,7 @@ func stripChars(str, chr string) string {
 	}, str)
 }
 
-// ToSnake convert the given string to snake case following the Golang format:
+// toSnake convert the given string to snake case following the Golang format:
 // acronyms are converted to lower-case and preceded by an underscore.
 func toSnake(in string) string {
 	runes := []rune(in)

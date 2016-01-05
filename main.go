@@ -69,9 +69,10 @@ func main() {
 			Name:    "ps",
 			Aliases: []string{},
 			Usage:   "Show container status",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerPs(); err != nil {
+				if err := settings.DockerPs(c.Args()); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -82,6 +83,7 @@ func main() {
 			Name:    "ip",
 			Aliases: []string{},
 			Usage:   "Show container ip addresses",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerIP(); err != nil {
@@ -108,9 +110,10 @@ func main() {
 			Name:    "start",
 			Aliases: []string{},
 			Usage:   "Start stopped containers",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerStart(dryRun); err != nil {
+				if err := settings.DockerStart(c.Args(), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
@@ -121,78 +124,55 @@ func main() {
 			Name:    "restart",
 			Aliases: []string{},
 			Usage:   "Restart containers",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerRestart(c.Int("time"), dryRun); err != nil {
+				if err := settings.DockerRestart(c.Args(), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
-			},
-			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  "time,t",
-					Usage: "Time in seconds to wait before killing",
-					Value: 10,
-				},
 			},
 		},
 		{
 			Name:    "stop",
 			Aliases: []string{},
 			Usage:   "Stop running containers",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := settings.DockerStop(c.Int("time"), dryRun); err != nil {
+				if err := settings.DockerStop(c.Args(), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
-			},
-			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  "time,t",
-					Usage: "Time in seconds to wait before killing",
-					Value: 10,
-				},
 			},
 		},
 		{
 			Name:    "kill",
 			Aliases: []string{},
 			Usage:   "Kill running containers using SIGKILL or a specified signal",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := settings.DockerKill(c.String("signal"), dryRun); err != nil {
+				if err := settings.DockerKill(c.Args(), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
-			},
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "signal,s",
-					Usage: "Signal to send to the containers",
-					Value: "KILL",
-				},
 			},
 		},
 		{
 			Name:    "rm",
 			Aliases: []string{},
 			Usage:   "Remove stopped containers",
+			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := settings.DockerRm(c.Bool("force"), dryRun); err != nil {
+				if err := settings.DockerRm(c.Args(), dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
-			},
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "force,f",
-					Usage: "Force remove if container is running",
-				},
 			},
 		},
 		{
