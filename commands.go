@@ -526,8 +526,6 @@ func runHook(hookName string, settings *ContainerSettings) error {
 		return nil
 	}
 
-	Info.Print("Executing hook: " + hookName + "\n")
-
 	ses = sh.NewSession()
 	ses.SetEnv("CAPITAN_CONTAINER_NAME", settings.Name)
 	ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
