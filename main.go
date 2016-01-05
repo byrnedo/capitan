@@ -110,10 +110,9 @@ func main() {
 			Name:    "start",
 			Aliases: []string{},
 			Usage:   "Start stopped containers",
-			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerStart(c.Args(), dryRun); err != nil {
+				if err := settings.DockerStart(dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}

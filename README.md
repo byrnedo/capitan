@@ -22,7 +22,7 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 1. Shell Support - Config is read from stdout of a shell command. Extremely flexible
 2. Hooks - hooks for before and after every intrusive action
 3. Predictable run sequence - containers started in order defined
-4. Future proof - options are passed through to docker cli, very simple.
+4. Future proof - options are passed through on most commands to docker cli, very simple.
 
 ## Commands
 
@@ -33,6 +33,8 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
     - Starts stopped containers
     
 - `capitan ps`		Show container status
+    
+    - Further arguments passed through to docker, example `capitan ps -a`
 
 - `capitan ip`		Show container ip addresses
 
@@ -43,12 +45,20 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 - `capitan start`   Start stopped containers
 
 - `capitan restart`	Restart containers
+    
+    - Further arguments passed through to docker, example `capitan start -t 5`
 
 - `capitan stop`	Stop running containers
-
+    
+    - Further arguments passed through to docker, example `capitan stop -t 5`
+    
 - `capitan kill`	Kill running containers using SIGKILL or a specified signal
+    
+    - Further arguments passed through to docker, example `capitan kill --signal KILL`
 
 - `capitan rm`		Remove stopped containers
+    
+    - Further arguments passed through to docker, example `capitan rm -f`
      
 ## Global options
      --cmd, -c "./capitan.cfg.sh"	command used to obtain config

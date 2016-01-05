@@ -262,7 +262,7 @@ func (set *ContainerSettings) GetRunArguments() []interface{} {
 }
 
 // Starts stopped containers
-func (settings *ProjectSettings) DockerStart(args []string, dryRun bool) error {
+func (settings *ProjectSettings) DockerStart(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
 		if isRunning(set.Name) {
@@ -271,7 +271,7 @@ func (settings *ProjectSettings) DockerStart(args []string, dryRun bool) error {
 		}
 		Info.Println("Starting " + set.Name)
 		if !dryRun {
-			if err := set.Start(args); err != nil {
+			if err := set.Start(nil); err != nil {
 				return err
 			}
 		}
