@@ -176,12 +176,25 @@ func main() {
 			},
 		},
 		{
-			Name:    "log",
+			Name:    "logs",
 			Aliases: []string{},
-			Usage:   "follow container logs",
+			Usage:   "stream container logs",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerLogs(); err != nil {
+					Error.Println(err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
+			Name:    "stats",
+			Aliases: []string{},
+			Usage:   "stream stats for all containers in project",
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := settings.DockerStats(); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}

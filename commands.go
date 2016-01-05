@@ -310,14 +310,14 @@ func (settings *ProjectSettings) DockerRestart(args []string, dryRun bool) error
 
 // Restart the container
 func (set *ContainerSettings) Restart(args []string) error {
-	if err := runHook("before.restart", set); err != nil {
+	if err := runHook("before.start", set); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := runCmd(append([]interface{}{"restart"}, toInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := runHook("after.restart", set); err != nil {
+	if err := runHook("after.start", set); err != nil {
 		return err
 	}
 	return nil
@@ -365,7 +365,7 @@ func (settings *ProjectSettings) DockerLogs() error {
 			ses *sh.Session
 			err error
 		)
-		if ses, err = set.Log(); err != nil {
+		if ses, err = set.Logs(); err != nil {
 			Error.Println("Error getting log for " + set.Name + ": " + err.Error())
 			continue
 		}
@@ -383,16 +383,36 @@ func (settings *ProjectSettings) DockerLogs() error {
 }
 
 // Start streaming a container's logs
-func (set *ContainerSettings) Log() (*sh.Session, error) {
+func (set *ContainerSettings) Logs() (*sh.Session, error) {
 	color := nextColor()
 	ses := sh.NewSession()
-	ses.Command("docker", "logs", "--tail", "1", "-f", set.Name)
+	ses.Command("docker", "logs", "--tail", "10", "-f", set.Name)
 
 	ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
 	ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
 
 	err := ses.Start()
 	return ses, err
+}
+
+// Stream all container stats
+func (settings *ProjectSettings) DockerStats() error {
+	var (
+		args []interface{}
+	)
+	sort.Sort(settings.ContainerSettingsList)
+
+	args = make([]interface{}, len(settings.ContainerSettingsList))
+
+	for i, set := range settings.ContainerSettingsList {
+		args[i] = set.Name
+	}
+
+	ses := sh.NewSession()
+	ses.Command("docker", append([]interface{}{"stats"}, args...)...)
+	ses.Start()
+	ses.Wait()
+	return nil
 }
 
 // Print `docker ps` ouptut for all containers in project
@@ -418,7 +438,7 @@ func (settings *ProjectSettings) DockerKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !isRunning(set.Name) {
-			Info.Println("Already dead:",set.Name)
+			Info.Println("Already dead:", set.Name)
 			continue
 		}
 		Info.Println("Killing " + set.Name)
@@ -452,7 +472,7 @@ func (settings *ProjectSettings) DockerStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !isRunning(set.Name) {
-			Info.Println("Already dead:",set.Name)
+			Info.Println("Already dead:", set.Name)
 			continue
 		}
 		Info.Println("Stopping " + set.Name)

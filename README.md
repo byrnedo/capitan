@@ -80,19 +80,31 @@ The output format is:
  
 All commands are passed through to docker cli as `--COMMAND` EXCEPT the following:
 
-- `build`: This allows a path to be given for a dockerfile.
+#### `build`
+This allows a path to be given for a dockerfile.
 
-- `hook`: Allows for a custom shell command to be evaluated at the following points:
+#### `hook`
+Allows for a custom shell command to be evaluated at the following points:
 
-    - Before/After Run (`before.run`, `after.run`)
-    - Before/After Start (`before.start`, `after.start`)
-    - Before/After Stop (`before.stop`, `after.stop`)
-    - Before/After Kill (`before.kill`, `after.kill`)
-    - Before/After Rm (`before.rm`, `after.rm`)
+- Before/After Run (`before.run`, `after.run`)
+    - This occurs during the `up` command
+- Before/After Start (`before.start`, `after.start`)
+    - This will occur in the `up`, `start` and `restart` command
+- Before/After Stop (`before.stop`, `after.stop`)
+    - This will occur in the `stop` command only
+- Before/After Kill (`before.kill`, `after.kill`)
+    - This will occur in the `kill` command only
+- Before/After Rm (`before.rm`, `after.rm`)
+    - This will occur in the `up` and `rm` command
+       
+*NOTE* hooks do not conform exactly to each command. Example: an `up` command may `rm` and then `run` a container OR just `start` a stopped container.
+    
 
-- `global project`: The project name, defaults to current working directory
+####`global project`
+The project name, defaults to current working directory
 
-- `global project_sep`: String to use to create container name from `project` and name specified in config
+#### `global project_sep`
+String to use to create container name from `project` and name specified in config
 
 
 ### Example Config :
@@ -108,6 +120,7 @@ All commands are passed through to docker cli as `--COMMAND` EXCEPT the followin
     redis hostname ${PREFIX}_redis
     redis publish 6379
     redis hook after.run sleep 10
+    redis hook after.start sleep 10
     
     #
     # General mongodb container
@@ -118,10 +131,18 @@ All commands are passed through to docker cli as `--COMMAND` EXCEPT the followin
     mongo publish 27017
     
     #
-    # General nats container
+    # My app
     #
-    nats image nats:latest
-    nats hostname ${PREFIX}_nats
-    nats publish 4222
+    app build ./
+    app publish 80
+    app link redis
+    app link mongo:mongodb
     EOF
 
+## Roadmap
+
+1. Tests
+2. Scaling (multiple instances of same container)
+3. More efficient `up` logic
+4. Helpful aliases in shell env.
+5. More flexible `build` command
