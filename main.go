@@ -16,6 +16,7 @@ func main() {
 		command    string
 		verboseLog bool
 		dryRun     bool
+		attach bool
 	)
 
 	app.Flags = []cli.Flag{
@@ -59,11 +60,18 @@ func main() {
 			Usage:   "Create then run or update containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerUp(dryRun); err != nil {
+				if err := settings.DockerUp(attach, dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
 
+			},
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:        "attach,a",
+					Usage:       "attach to container output",
+					Destination: &attach,
+				},
 			},
 		},
 		{
