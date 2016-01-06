@@ -161,6 +161,7 @@ func (settings *ProjectSettings) LaunchCleanupWatcher() {
 					go func() {
 						settings.DockerStop(nil, false)
 						Info.Println("Done stopping containers")
+						allDone <- true
 					}()
 					//kill
 				} else {

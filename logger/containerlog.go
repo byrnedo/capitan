@@ -26,10 +26,6 @@ func NewContainerLogWriter(out io.Writer, containerName string, color string) *C
 }
 
 func (w *ContainerLogWriter) Write(b []byte) (int, error) {
-	for _, row := range bytes.Split(b, []byte{'\r', '\n'}) {
-		if len(row) > 0 {
-			w.Printf("%s%s%s", w.colorCode, bytes.Trim(row, " "), resetCode)
-		}
-	}
+	w.Printf("%s%s%s", w.colorCode, bytes.Trim(b, " \n"), resetCode)
 	return len(b), nil
 }
