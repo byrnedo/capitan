@@ -22,17 +22,17 @@ const UniqueLabelName = "capitanRunCmd"
 
 var (
 	colorList = []string{
-	"white",
-	"red",
-	"green",
-	"yellow",
-	"blue",
-	"magenta",
-	"cyan",
-}
+		"white",
+		"red",
+		"green",
+		"yellow",
+		"blue",
+		"magenta",
+		"cyan",
+	}
 
 	nextColorIndex = rand.Intn(len(colorList) - 1)
-	allDone = make(chan bool, 1)
+	allDone        = make(chan bool, 1)
 )
 
 // Get the next color to be used in log output
@@ -142,38 +142,35 @@ func runCmd(args ...interface{}) ([]byte, error) {
 	out, err := ses.Command("docker", args...).Output()
 	Debug.Println(string(out))
 	if err != nil {
-		return out, err
+		return out, errors.New("Error running docker command:" + err.Error())
 	}
 	return out, nil
 }
 
 func (settings *ProjectSettings) LaunchCleanupWatcher() {
-	signalChannel := make(chan os.Signal, 2)
+	signalChannel := make(chan os.Signal)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		var calls int
 		for {
-			select {
-			case sig := <-signalChannel:
-				switch sig {
-				case os.Interrupt, syscall.SIGTERM:
-					calls++
-					if calls == 1 {
+			sig := <-signalChannel
+			switch sig {
+			case os.Interrupt, syscall.SIGTERM:
+				calls++
+				if calls == 1 {
+					go func() {
 						settings.DockerStop(nil, false)
-						allDone <- true
-						//stop
-					} else if calls == 2 {
-						settings.DockerKill(nil, false)
-						allDone <- true
-						//kill
-					} else {
-						Info.Println("Be patient...")
-					}
-				default:
-					Debug.Println("Unhandled signal", sig)
+						Info.Println("Done stopping containers")
+					}()
+					//kill
+				} else {
+					Info.Println("Be patient...")
 				}
+			default:
+				Debug.Println("Unhandled signal", sig)
 			}
 		}
+		Info.Println("Done cleaning up")
 	}()
 }
 
@@ -284,7 +281,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 	}
 	wg.Wait()
 	if attach {
-		<- allDone
+		<-allDone
 	}
 	return nil
 }
@@ -408,7 +405,7 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 	}
 	wg.Wait()
 	if attach {
-		<- allDone
+		<-allDone
 	}
 	return nil
 }
@@ -640,7 +637,7 @@ func (set *ContainerSettings) Stop(args []string) error {
 		return err
 	}
 	args = append(args, set.Name)
-	if _, err := runCmd(append([]interface{}{"kill"}, toInterfaceSlice(args)...)...); err != nil {
+	if _, err := runCmd(append([]interface{}{"stop"}, toInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
 	if err := runHook("after.stop", set); err != nil {
