@@ -148,8 +148,35 @@ func runCmd(args ...interface{}) ([]byte, error) {
 }
 
 func (settings *ProjectSettings) LaunchCleanupWatcher() {
-	signalChannel := make(chan os.Signal)
+
+	var (
+		killBegan     = make(chan bool, 1)
+		killDone      = make(chan bool, 1)
+		stopDone      = make(chan bool, 1)
+		signalChannel = make(chan os.Signal)
+	)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+
+		var (
+			killing bool
+		)
+
+		for {
+			select {
+			case <-killBegan:
+				killing = true
+			case <-stopDone:
+				if !killing {
+					allDone <- true
+				}
+			case <-killDone:
+				allDone <- true
+			}
+		}
+	}()
+
 	go func() {
 		var calls int
 		for {
@@ -160,12 +187,12 @@ func (settings *ProjectSettings) LaunchCleanupWatcher() {
 				if calls == 1 {
 					go func() {
 						settings.DockerStop(nil, false)
-						Info.Println("Done stopping containers")
-						allDone <- true
+						stopDone <- true
 					}()
-					//kill
-				} else {
-					Info.Println("Be patient...")
+				} else if calls == 2 {
+					killBegan <- true
+					settings.DockerKill(nil, false)
+					killDone <- true
 				}
 			default:
 				Debug.Println("Unhandled signal", sig)
