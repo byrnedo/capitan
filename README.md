@@ -32,7 +32,7 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
         2. Container config has changed
     - Starts stopped containers
 
-    - Optionally can attach to output using `--attach|-a` flag. NOTE this doesn't allow you to kill containers by Ctrl-C yet.
+    - Optionally can attach to output using `--attach|-a` flag. NOTE killing capitan will immediately kill the containers too.
     
 - `capitan ps`		Show container status
     
@@ -45,6 +45,8 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 - `capitan build`   Build any containers with 'build' flag set (WIP)
 
 - `capitan start`   Start stopped containers
+
+    - Optionally can attach to output using `--attach|-a` flag. NOTE killing capitan will immediately kill the containers too.
 
 - `capitan restart`	Restart containers
     
