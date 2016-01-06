@@ -16,7 +16,7 @@ func main() {
 		command    string
 		verboseLog bool
 		dryRun     bool
-		attach bool
+		attach     bool
 	)
 
 	app.Flags = []cli.Flag{
@@ -60,8 +60,9 @@ func main() {
 			Usage:   "Create then run or update containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
+				settings.LaunchCleanupWatcher()
 				if err := settings.DockerUp(attach, dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Up failed:", err)
 					os.Exit(1)
 				}
 
@@ -75,28 +76,28 @@ func main() {
 			},
 		},
 		{
-			Name:    "ps",
-			Aliases: []string{},
-			Usage:   "Show container status",
+			Name:            "ps",
+			Aliases:         []string{},
+			Usage:           "Show container status",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerPs(c.Args()); err != nil {
-					Error.Println(err)
+					Error.Println("Ps failed:", err)
 					os.Exit(1)
 				}
 
 			},
 		},
 		{
-			Name:    "ip",
-			Aliases: []string{},
-			Usage:   "Show container ip addresses",
+			Name:            "ip",
+			Aliases:         []string{},
+			Usage:           "Show container ip addresses",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerIP(); err != nil {
-					Error.Println(err)
+					Error.Println("IP failed:", err)
 					os.Exit(1)
 				}
 
@@ -109,7 +110,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.CapitanBuild(dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Build failed:", err)
 					os.Exit(1)
 				}
 
@@ -121,8 +122,9 @@ func main() {
 			Usage:   "Start stopped containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
+				settings.LaunchCleanupWatcher()
 				if err := settings.DockerStart(attach, dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Start failed:", err)
 					os.Exit(1)
 				}
 			},
@@ -135,56 +137,56 @@ func main() {
 			},
 		},
 		{
-			Name:    "restart",
-			Aliases: []string{},
-			Usage:   "Restart containers",
+			Name:            "restart",
+			Aliases:         []string{},
+			Usage:           "Restart containers",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerRestart(c.Args(), dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Restart failed:", err)
 					os.Exit(1)
 				}
 			},
 		},
 		{
-			Name:    "stop",
-			Aliases: []string{},
-			Usage:   "Stop running containers",
+			Name:            "stop",
+			Aliases:         []string{},
+			Usage:           "Stop running containers",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
 				if err := settings.DockerStop(c.Args(), dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Stop failed:", err)
 					os.Exit(1)
 				}
 			},
 		},
 		{
-			Name:    "kill",
-			Aliases: []string{},
-			Usage:   "Kill running containers using SIGKILL or a specified signal",
+			Name:            "kill",
+			Aliases:         []string{},
+			Usage:           "Kill running containers using SIGKILL or a specified signal",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
 				if err := settings.DockerKill(c.Args(), dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Kill failed:", err)
 					os.Exit(1)
 				}
 			},
 		},
 		{
-			Name:    "rm",
-			Aliases: []string{},
-			Usage:   "Remove stopped containers",
+			Name:            "rm",
+			Aliases:         []string{},
+			Usage:           "Remove stopped containers",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
 				if err := settings.DockerRm(c.Args(), dryRun); err != nil {
-					Error.Println(err)
+					Error.Println("Rm failed:", err)
 					os.Exit(1)
 				}
 			},
@@ -196,7 +198,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerLogs(); err != nil {
-					Error.Println(err)
+					Error.Println("Logs failed:", err)
 					os.Exit(1)
 				}
 
@@ -209,7 +211,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				if err := settings.DockerStats(); err != nil {
-					Error.Println(err)
+					Error.Println("Stats failed:", err)
 					os.Exit(1)
 				}
 

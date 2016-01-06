@@ -10,15 +10,18 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
 const UniqueLabelName = "capitanRunCmd"
 
-var colorList = []string{
+var (
+	colorList = []string{
 	"white",
 	"red",
 	"green",
@@ -28,7 +31,9 @@ var colorList = []string{
 	"cyan",
 }
 
-var nextColorIndex = rand.Intn(len(colorList) - 1)
+	nextColorIndex = rand.Intn(len(colorList) - 1)
+	allDone = make(chan bool, 1)
+)
 
 // Get the next color to be used in log output
 func nextColor() string {
@@ -142,6 +147,36 @@ func runCmd(args ...interface{}) ([]byte, error) {
 	return out, nil
 }
 
+func (settings *ProjectSettings) LaunchCleanupWatcher() {
+	signalChannel := make(chan os.Signal, 2)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		var calls int
+		for {
+			select {
+			case sig := <-signalChannel:
+				switch sig {
+				case os.Interrupt, syscall.SIGTERM:
+					calls++
+					if calls == 1 {
+						settings.DockerStop(nil, false)
+						allDone <- true
+						//stop
+					} else if calls == 2 {
+						settings.DockerKill(nil, false)
+						allDone <- true
+						//kill
+					} else {
+						Info.Println("Be patient...")
+					}
+				default:
+					Debug.Println("Unhandled signal", sig)
+				}
+			}
+		}
+	}()
+}
+
 // The build command
 func (settings *ProjectSettings) CapitanBuild(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
@@ -248,11 +283,14 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 
 	}
 	wg.Wait()
+	if attach {
+		<- allDone
+	}
 	return nil
 }
 
 // Run a container
-func (set *ContainerSettings) Run(attach bool, dryRun bool, wg *sync.WaitGroup) (error) {
+func (set *ContainerSettings) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	set.Action = Run
 
 	Info.Println("Running " + set.Name)
@@ -272,18 +310,15 @@ func (set *ContainerSettings) Run(attach bool, dryRun bool, wg *sync.WaitGroup) 
 	)
 
 	if attach {
-		cmd = append([]interface{}{"run", "-i", "--label", uniqueLabel}, cmd...)
+		cmd = append([]interface{}{"run", "-a", "stdout", "-a", "stderr", "--sig-proxy=false", "--label", uniqueLabel}, cmd...)
 		if ses, err = set.startForegroundCommand(cmd); err != nil {
 			return err
 		}
 		wg.Add(1)
-		go func() {
-			waitErr := ses.Wait()
-			if waitErr != nil {
-				Error.Println(set.Name, "returned error:", waitErr.Error())
-			}
+		go func(name string) {
+			ses.Wait()
 			wg.Done()
-		}()
+		}(set.Name)
 	} else {
 		cmd = append([]interface{}{"run", "-d", "--label", uniqueLabel}, cmd...)
 		if ses, err = set.startDaemonCommand(cmd); err != nil {
@@ -325,10 +360,9 @@ func (set *ContainerSettings) startForegroundCommand(cmd []interface{}) (*sh.Ses
 		return ses, err
 	}
 
-	if ! isRunningOrRetry(set.Name, 10, 300*time.Millisecond) {
+	if !isRunningOrRetry(set.Name, 10, 300*time.Millisecond) {
 		return ses, errors.New(set.Name + " failed to start")
 	}
-
 
 	return ses, nil
 }
@@ -373,6 +407,9 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 		}
 	}
 	wg.Wait()
+	if attach {
+		<- allDone
+	}
 	return nil
 }
 
@@ -387,22 +424,24 @@ func (set *ContainerSettings) Start(attach bool, wg *sync.WaitGroup) error {
 		return err
 	}
 	if attach {
-		if ses, err = set.startForegroundCommand(append([]interface{}{"start", "-i"}, set.Name)); err != nil {
+		if ses, err = set.startDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
+			return err
+		}
+		time.Sleep(100 * time.Millisecond)
+		if ses, err = set.startForegroundCommand(append([]interface{}{"attach", "--no-stdin=true", "--sig-proxy=false"}, set.Name)); err != nil {
 			return err
 		}
 		wg.Add(1)
-		go func() {
-			if err = ses.Wait(); err != nil {
-				Error.Println("Error during shell wait:", err)
-			}
+		go func(name string) {
+			ses.Wait()
 			wg.Done()
-		}()
+		}(set.Name)
 	} else {
 		if ses, err = set.startDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
 			return err
 		}
 		if err = ses.Wait(); err != nil {
-			return errors.New("Error during shell wait: " + err.Error())
+			return errors.New("Exit error for " + set.Name + ":" + err.Error())
 		}
 	}
 
@@ -411,7 +450,6 @@ func (set *ContainerSettings) Start(attach bool, wg *sync.WaitGroup) error {
 	}
 	return nil
 }
-
 
 // Command to restart all containers
 func (settings *ProjectSettings) DockerRestart(args []string, dryRun bool) error {

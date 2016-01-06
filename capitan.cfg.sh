@@ -9,6 +9,7 @@ redis image redis:latest
 redis hostname ${PREFIX}_redis
 redis publish 6379
 redis hook after.run sleep 2
+redis hook after.start sleep 2
 
 #
 # General mongodb container

@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
 	"os"
 	"path"
 	"strings"
 	"unicode"
-	"errors"
 )
 
 type SettingsRunner struct {
@@ -23,11 +23,10 @@ func NewSettingsRunner(cmd string) *SettingsRunner {
 
 func (f *SettingsRunner) Run() (*ProjectSettings, error) {
 	var (
-		output []byte
-		err    error
+		output   []byte
+		err      error
 		cmdSlice []string
-		cmdArgs []interface{}
-
+		cmdArgs  []interface{}
 	)
 	if len(f.Command) == 0 {
 		return nil, errors.New("Command must not be empty")
@@ -69,12 +68,12 @@ type Link struct {
 type AppliedAction string
 
 const (
-	Run AppliedAction = "run"
-	Start AppliedAction = "start"
-	Stop AppliedAction = "stop"
-	Kill AppliedAction = "kill"
+	Run     AppliedAction = "run"
+	Start   AppliedAction = "start"
+	Stop    AppliedAction = "stop"
+	Kill    AppliedAction = "kill"
 	Restart AppliedAction = "restart"
-	Remove AppliedAction = "remove"
+	Remove  AppliedAction = "remove"
 )
 
 type ContainerSettings struct {
@@ -86,7 +85,7 @@ type ContainerSettings struct {
 	Command     []string
 	Links       []Link
 	Hooks       map[string]string
-	Action       AppliedAction // used in commands
+	Action      AppliedAction // used in commands
 	UniqueLabel string
 }
 
