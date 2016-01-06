@@ -121,11 +121,17 @@ func main() {
 			Usage:   "Start stopped containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerStart(dryRun); err != nil {
+				if err := settings.DockerStart(attach, dryRun); err != nil {
 					Error.Println(err)
 					os.Exit(1)
 				}
-
+			},
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:        "attach,a",
+					Usage:       "attach to container output",
+					Destination: &attach,
+				},
 			},
 		},
 		{

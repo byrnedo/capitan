@@ -109,6 +109,23 @@ func isRunning(name string) bool {
 	return false
 }
 
+func isRunningOrRetry(name string, maxAttempts int, interval time.Duration) bool {
+	attempts := 0
+	for {
+		attempts++
+		if isRunning(name) {
+			return true
+		}
+
+		if attempts >= maxAttempts {
+			break
+		} else {
+			time.Sleep(interval)
+		}
+	}
+	return false
+}
+
 // Helper to run a docker command
 func runCmd(args ...interface{}) ([]byte, error) {
 	ses := sh.NewSession()
@@ -175,7 +192,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 		)
 
 		if !containerExists(set.Name) {
-			if _, err = set.Run(attach, dryRun, &wg); err != nil {
+			if err = set.Run(attach, dryRun, &wg); err != nil {
 				return err
 			}
 			continue
@@ -193,7 +210,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 					}
 				}
 
-				if _, err = set.Run(attach, dryRun, &wg); err != nil {
+				if err = set.Run(attach, dryRun, &wg); err != nil {
 					return err
 				}
 
@@ -209,7 +226,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 					}
 				}
 
-				if _, err = set.Run(attach, dryRun, &wg); err != nil {
+				if err = set.Run(attach, dryRun, &wg); err != nil {
 					return err
 				}
 				continue
@@ -223,7 +240,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 			if dryRun {
 				continue
 			}
-			if err = set.Start(nil); err != nil {
+			if err = set.Start(attach, &wg); err != nil {
 				return err
 			}
 		}
@@ -235,15 +252,15 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 }
 
 // Run a container
-func (set *ContainerSettings) Run(attach bool, dryRun bool, wg *sync.WaitGroup) (*sh.Session, error) {
+func (set *ContainerSettings) Run(attach bool, dryRun bool, wg *sync.WaitGroup) (error) {
 	set.Action = Run
 
 	Info.Println("Running " + set.Name)
 	if dryRun {
-		return nil, nil
+		return nil
 	}
 	if err := runHook("before.run", set); err != nil {
-		return nil, err
+		return err
 	}
 
 	cmd := set.GetRunArguments()
@@ -255,31 +272,34 @@ func (set *ContainerSettings) Run(attach bool, dryRun bool, wg *sync.WaitGroup) 
 	)
 
 	if attach {
-		cmd = append([]interface{}{"run", "-t", "--label", uniqueLabel}, cmd...)
-		ses, err = set.runContainerInForeground(cmd)
+		cmd = append([]interface{}{"run", "-i", "--label", uniqueLabel}, cmd...)
+		if ses, err = set.startForegroundCommand(cmd); err != nil {
+			return err
+		}
 		wg.Add(1)
 		go func() {
-			err := ses.Wait()
-			if err != nil {
-				Error.Println(set.Name, "returned error:", err.Error())
+			waitErr := ses.Wait()
+			if waitErr != nil {
+				Error.Println(set.Name, "returned error:", waitErr.Error())
 			}
 			wg.Done()
 		}()
 	} else {
 		cmd = append([]interface{}{"run", "-d", "--label", uniqueLabel}, cmd...)
-		ses, err = set.runContainerDaemon(cmd)
+		if ses, err = set.startDaemonCommand(cmd); err != nil {
+			return err
+		}
 		err = ses.Wait()
-	}
-
-	if err != nil {
-		return ses, err
+		if err != nil {
+			Error.Println(set.Name, "returned error:", err.Error())
+		}
 	}
 
 	err = runHook("after.run", set)
-	return ses, err
+	return err
 }
 
-func (set *ContainerSettings) runContainerDaemon(cmd []interface{}) (*sh.Session, error) {
+func (set *ContainerSettings) startDaemonCommand(cmd []interface{}) (*sh.Session, error) {
 	var (
 		ses *sh.Session
 		err error
@@ -292,7 +312,7 @@ func (set *ContainerSettings) runContainerDaemon(cmd []interface{}) (*sh.Session
 	return ses, err
 }
 
-func (set *ContainerSettings) runContainerInForeground(cmd []interface{}) (*sh.Session, error) {
+func (set *ContainerSettings) startForegroundCommand(cmd []interface{}) (*sh.Session, error) {
 	ses := sh.NewSession()
 	if logger.GetLevel() == DebugLevel {
 		ses.ShowCMD = true
@@ -305,19 +325,10 @@ func (set *ContainerSettings) runContainerInForeground(cmd []interface{}) (*sh.S
 		return ses, err
 	}
 
-	attempts := 0
-	for {
-		attempts++
-		if isRunning(set.Name) {
-			break
-		}
-
-		if attempts >= 10 {
-			return ses, errors.New(set.Name + " failed to start")
-		} else {
-			time.Sleep(300 * time.Millisecond)
-		}
+	if ! isRunningOrRetry(set.Name, 10, 300*time.Millisecond) {
+		return ses, errors.New(set.Name + " failed to start")
 	}
+
 
 	return ses, nil
 }
@@ -346,8 +357,9 @@ func (set *ContainerSettings) GetRunArguments() []interface{} {
 }
 
 // Starts stopped containers
-func (settings *ProjectSettings) DockerStart(dryRun bool) error {
+func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
+	wg := sync.WaitGroup{}
 	for _, set := range settings.ContainerSettingsList {
 		if isRunning(set.Name) {
 			Info.Println("Already running:", set.Name)
@@ -355,29 +367,51 @@ func (settings *ProjectSettings) DockerStart(dryRun bool) error {
 		}
 		Info.Println("Starting " + set.Name)
 		if !dryRun {
-			if err := set.Start(nil); err != nil {
+			if err := set.Start(attach, &wg); err != nil {
 				return err
 			}
 		}
 	}
+	wg.Wait()
 	return nil
 }
 
 // Start a given container
-func (set *ContainerSettings) Start(args []string) error {
+func (set *ContainerSettings) Start(attach bool, wg *sync.WaitGroup) error {
+	var (
+		ses *sh.Session
+		err error
+	)
 	set.Action = Start
-	if err := runHook("before.start", set); err != nil {
+	if err = runHook("before.start", set); err != nil {
 		return err
 	}
-	args = append(args, set.Name)
-	if _, err := runCmd(append([]interface{}{"start"}, toInterfaceSlice(args)...)...); err != nil {
-		return err
+	if attach {
+		if ses, err = set.startForegroundCommand(append([]interface{}{"start", "-i"}, set.Name)); err != nil {
+			return err
+		}
+		wg.Add(1)
+		go func() {
+			if err = ses.Wait(); err != nil {
+				Error.Println("Error during shell wait:", err)
+			}
+			wg.Done()
+		}()
+	} else {
+		if ses, err = set.startDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
+			return err
+		}
+		if err = ses.Wait(); err != nil {
+			return errors.New("Error during shell wait: " + err.Error())
+		}
 	}
+
 	if err := runHook("after.start", set); err != nil {
 		return err
 	}
 	return nil
 }
+
 
 // Command to restart all containers
 func (settings *ProjectSettings) DockerRestart(args []string, dryRun bool) error {
