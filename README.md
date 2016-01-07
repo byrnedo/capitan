@@ -6,7 +6,7 @@ Capitan is only a wrapper around the docker cli tool, no api usage whatsoever (w
 This means it will basically work with all versions of docker.
 
 ![Capitan showcase]
-(http://s10.postimg.org/c5fhuf93r/output.gif)
+(output.gif)
 
 ## Commands
 
