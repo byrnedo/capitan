@@ -26,6 +26,8 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 
 ## Commands
 
+### Invasive commands
+
 - `capitan up`		Create then run or update containers 
     - Recreates if:
         1. If newer image is found it will remove the old container and run a new one
@@ -34,16 +36,6 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 
     - Optionally can attach to output using `--attach|-a` flag.
     
-- `capitan ps`		Show container status
-    
-    - Further arguments passed through to docker, example `capitan ps -a`
-
-- `capitan ip`		Show container ip addresses
-
-- `capitan logs`     Follow container logs
-
-- `capitan build`   Build any containers with 'build' flag set (WIP)
-
 - `capitan start`   Start stopped containers
 
     - Optionally can attach to output using `--attach|-a` flag.
@@ -63,6 +55,21 @@ Written totally in bash. I love bash but I personally feel safer with go. That i
 - `capitan rm`		Remove stopped containers
     
     - Further arguments passed through to docker, example `capitan rm -f`
+    
+### Non invasive commands
+    
+- `capitan ps`		Show container status
+    
+    - Further arguments passed through to docker, example `capitan ps -a`
+
+- `capitan ip`		Show container ip addresses
+
+- `capitan logs`    Follow container logs
+
+- `capitan pull`    Pull images for all containers
+
+- `capitan build`   Build any containers with 'build' flag set (WIP)
+
      
 ## Global options
      --cmd, -c "./capitan.cfg.sh"	command used to obtain config

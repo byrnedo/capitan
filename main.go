@@ -50,7 +50,8 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) {
-		Info.Println("Please give a command")
+		cli.ShowAppHelp(c)
+		os.Exit(1)
 	}
 
 	app.Commands = []cli.Command{
@@ -61,7 +62,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				settings.LaunchCleanupWatcher()
-				if err := settings.DockerUp(attach, dryRun); err != nil {
+				if err := settings.CapitanUp(attach, dryRun); err != nil {
 					Error.Println("Up failed:", err)
 					os.Exit(1)
 				}
@@ -82,7 +83,7 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerPs(c.Args()); err != nil {
+				if err := settings.CapitanPs(c.Args()); err != nil {
 					Error.Println("Ps failed:", err)
 					os.Exit(1)
 				}
@@ -96,7 +97,7 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerIP(); err != nil {
+				if err := settings.CapitanIP(); err != nil {
 					Error.Println("IP failed:", err)
 					os.Exit(1)
 				}
@@ -117,13 +118,26 @@ func main() {
 			},
 		},
 		{
+			Name:    "pull",
+			Aliases: []string{},
+			Usage:   "Pull all images defined in project",
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := settings.CapitanPull(dryRun); err != nil {
+					Error.Println("Pull failed:", err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
 			Name:    "start",
 			Aliases: []string{},
 			Usage:   "Start stopped containers",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 				settings.LaunchCleanupWatcher()
-				if err := settings.DockerStart(attach, dryRun); err != nil {
+				if err := settings.CapitanStart(attach, dryRun); err != nil {
 					Error.Println("Start failed:", err)
 					os.Exit(1)
 				}
@@ -143,7 +157,7 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerRestart(c.Args(), dryRun); err != nil {
+				if err := settings.CapitanRestart(c.Args(), dryRun); err != nil {
 					Error.Println("Restart failed:", err)
 					os.Exit(1)
 				}
@@ -157,7 +171,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := settings.DockerStop(c.Args(), dryRun); err != nil {
+				if err := settings.CapitanStop(c.Args(), dryRun); err != nil {
 					Error.Println("Stop failed:", err)
 					os.Exit(1)
 				}
@@ -171,7 +185,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := settings.DockerKill(c.Args(), dryRun); err != nil {
+				if err := settings.CapitanKill(c.Args(), dryRun); err != nil {
 					Error.Println("Kill failed:", err)
 					os.Exit(1)
 				}
@@ -185,7 +199,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
 
-				if err := settings.DockerRm(c.Args(), dryRun); err != nil {
+				if err := settings.CapitanRm(c.Args(), dryRun); err != nil {
 					Error.Println("Rm failed:", err)
 					os.Exit(1)
 				}
@@ -197,7 +211,7 @@ func main() {
 			Usage:   "stream container logs",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerLogs(); err != nil {
+				if err := settings.CapitanLogs(); err != nil {
 					Error.Println("Logs failed:", err)
 					os.Exit(1)
 				}
@@ -210,7 +224,7 @@ func main() {
 			Usage:   "stream stats for all containers in project",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.DockerStats(); err != nil {
+				if err := settings.CapitanStats(); err != nil {
 					Error.Println("Stats failed:", err)
 					os.Exit(1)
 				}

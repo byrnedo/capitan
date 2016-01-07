@@ -78,12 +78,12 @@ func (settings *ProjectSettings) LaunchCleanupWatcher() {
 				calls++
 				if calls == 1 {
 					go func() {
-						settings.DockerStop(nil, false)
+						settings.CapitanStop(nil, false)
 						stopDone <- true
 					}()
 				} else if calls == 2 {
 					killBegan <- true
-					settings.DockerKill(nil, false)
+					settings.CapitanKill(nil, false)
 					killDone <- true
 				}
 			default:
@@ -115,7 +115,7 @@ func getContainerUniqueLabel(name string) string {
 // Recreates a container if the container's image has a newer id locally
 // OR if the command used to create the container is now changed (i.e.
 // config has changed.
-func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
+func (settings *ProjectSettings) CapitanUp(attach bool, dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 
 	wg := sync.WaitGroup{}
@@ -202,7 +202,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 }
 
 // Starts stopped containers
-func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
+func (settings *ProjectSettings) CapitanStart(attach bool, dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 	wg := sync.WaitGroup{}
 	for _, set := range settings.ContainerSettingsList {
@@ -231,8 +231,8 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 }
 
 // Command to restart all containers
-func (settings *ProjectSettings) DockerRestart(args []string, dryRun bool) error {
-	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
+func (settings *ProjectSettings) CapitanRestart(args []string, dryRun bool) error {
+	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
 		Info.Println("Restarting " + set.Name)
 		if !dryRun {
@@ -245,7 +245,7 @@ func (settings *ProjectSettings) DockerRestart(args []string, dryRun bool) error
 }
 
 // Print all container IPs
-func (settings *ProjectSettings) DockerIP() error {
+func (settings *ProjectSettings) CapitanIP() error {
 	sort.Sort(settings.ContainerSettingsList)
 	for _, set := range settings.ContainerSettingsList {
 		ip := set.IP()
@@ -255,7 +255,7 @@ func (settings *ProjectSettings) DockerIP() error {
 }
 
 // Stream all container logs
-func (settings *ProjectSettings) DockerLogs() error {
+func (settings *ProjectSettings) CapitanLogs() error {
 	sort.Sort(settings.ContainerSettingsList)
 	var wg sync.WaitGroup
 	for _, set := range settings.ContainerSettingsList {
@@ -281,7 +281,7 @@ func (settings *ProjectSettings) DockerLogs() error {
 }
 
 // Stream all container stats
-func (settings *ProjectSettings) DockerStats() error {
+func (settings *ProjectSettings) CapitanStats() error {
 	var (
 		args []interface{}
 	)
@@ -301,7 +301,7 @@ func (settings *ProjectSettings) DockerStats() error {
 }
 
 // Print `docker ps` ouptut for all containers in project
-func (settings *ProjectSettings) DockerPs(args []string) error {
+func (settings *ProjectSettings) CapitanPs(args []string) error {
 	sort.Sort(settings.ContainerSettingsList)
 	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
 	for _, set := range settings.ContainerSettingsList {
@@ -319,7 +319,7 @@ func (settings *ProjectSettings) DockerPs(args []string) error {
 }
 
 // Kill all running containers in project
-func (settings *ProjectSettings) DockerKill(args []string, dryRun bool) error {
+func (settings *ProjectSettings) CapitanKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !helpers.ContainerIsRunning(set.Name) {
@@ -337,7 +337,7 @@ func (settings *ProjectSettings) DockerKill(args []string, dryRun bool) error {
 }
 
 // Stops the containers in the project
-func (settings *ProjectSettings) DockerStop(args []string, dryRun bool) error {
+func (settings *ProjectSettings) CapitanStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 		if !helpers.ContainerIsRunning(set.Name) {
@@ -355,7 +355,7 @@ func (settings *ProjectSettings) DockerStop(args []string, dryRun bool) error {
 }
 
 // Remove all containers in project
-func (settings *ProjectSettings) DockerRm(args []string, dryRun bool) error {
+func (settings *ProjectSettings) CapitanRm(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 
@@ -381,6 +381,24 @@ func (settings *ProjectSettings) CapitanBuild(dryRun bool) error {
 		Info.Println("Building " + set.Name)
 		if !dryRun {
 			if err := set.BuildImage(); err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+// The build command
+func (settings *ProjectSettings) CapitanPull(dryRun bool) error {
+	sort.Sort(settings.ContainerSettingsList)
+	for _, set := range settings.ContainerSettingsList {
+		if len(set.Build) > 0 || set.Image == "" {
+			continue
+		}
+		Info.Println("Pulling", set.Image, "for", set.Name)
+		if !dryRun {
+			if err := helpers.PullImage(set.Image); err != nil {
 				return err
 			}
 		}
