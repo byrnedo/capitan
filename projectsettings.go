@@ -101,6 +101,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 			err error
 		)
 
+		//create new
 		if !containerExists(set.Name) {
 			if err = set.Run(attach, dryRun, &wg); err != nil {
 				return err
@@ -108,6 +109,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 			continue
 		}
 
+		// check image change or args change
 		if set.Image != "" {
 			conImage := getContainerImageId(set.Name)
 			localImage := getImageId(set.Image)
@@ -143,16 +145,27 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 			}
 		}
 
+		//attach if running
 		if isRunning(set.Name) {
-			Info.Println("Already running:", set.Name)
-		} else {
-			Info.Println("Starting " + set.Name)
-			if dryRun {
-				continue
+			Info.Println("Already running " + set.Name)
+			if attach {
+				Info.Println("Attaching")
+				if err := set.Attach(&wg); err != nil {
+					return err
+				}
 			}
-			if err = set.Start(attach, &wg); err != nil {
-				return err
-			}
+			continue
+		}
+
+		Info.Println("Starting " + set.Name)
+
+		if dryRun {
+			continue
+		}
+
+		//start if stopped
+		if err = set.Start(attach, &wg); err != nil {
+			return err
 		}
 		continue
 
@@ -170,7 +183,13 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 	wg := sync.WaitGroup{}
 	for _, set := range settings.ContainerSettingsList {
 		if isRunning(set.Name) {
-			Info.Println("Already running:", set.Name)
+			Info.Println("Already running " + set.Name)
+			if attach {
+				Info.Println("Attaching")
+				if err := set.Attach(&wg); err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		Info.Println("Starting " + set.Name)

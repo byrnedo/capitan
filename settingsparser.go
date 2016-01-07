@@ -3,13 +3,13 @@ package main
 import (
 	"bytes"
 	"errors"
+	"github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
 	"os"
 	"path"
 	"strings"
 	"unicode"
-	"github.com/byrnedo/capitan/logger"
 )
 
 type SettingsParser struct {
@@ -21,7 +21,6 @@ func NewSettingsParser(cmd string) *SettingsParser {
 		Command: cmd,
 	}
 }
-
 
 func (f *SettingsParser) Run() (*ProjectSettings, error) {
 	var (

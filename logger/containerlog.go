@@ -2,10 +2,10 @@ package logger
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/mgutz/ansi"
 	"io"
 	"log"
-	"fmt"
 	"strconv"
 )
 
@@ -15,14 +15,14 @@ type ContainerLogWriter struct {
 }
 
 var (
-	resetCode = []byte(ansi.ColorCode("reset"))
+	resetCode            = []byte(ansi.ColorCode("reset"))
 	LongestContainerName int
 )
 
 func NewContainerLogWriter(out io.Writer, containerName string, color string) *ContainerLogWriter {
 
 	conOut := log.New(out,
-		ansi.Color(fmt.Sprintf("%-" + strconv.Itoa(LongestContainerName) + "s| ", containerName), color),
+		ansi.Color(fmt.Sprintf("%-"+strconv.Itoa(LongestContainerName)+"s| ", containerName), color),
 		0)
 	return &ContainerLogWriter{
 		Logger:    conOut,

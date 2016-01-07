@@ -71,107 +71,15 @@ type Container struct {
 	UniqueLabel string
 }
 
-//Get the id for a given image name
-func getImageId(imageName string) string {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "image", "--format", "{{.Id}}", imageName).Output()
-	if err != nil {
-		return ""
-	}
-	imageId := strings.Trim(string(out), " \n")
-	return imageId
-}
-//pull the image for a given image name
-func pullImage(imageName string) error {
-	ses := sh.NewSession()
-	err := ses.Command("docker", "pull", imageName).Run()
-	return err
-}
-
-
-// Get the value of the label used to record the run
-// arguments used when creating the container
-func getContainerUniqueLabel(name string) string {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels."+UniqueLabelName+"}}", name).Output()
-	if err != nil {
-		return ""
-	}
-	label := strings.Trim(string(out), " \n")
-	return label
-
-}
-
-// Get the image id for a given container
-func getContainerImageId(name string) string {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Image}}", name).Output()
-	if err != nil {
-		return ""
-	}
-	imageId := strings.Trim(string(out), " \n")
-	return imageId
-
-}
-
-// Checks if a container exists
-func containerExists(name string) bool {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--format", "{{.State.Running}}", name).Output()
-	if err != nil {
-		return false
-	}
-	if strings.Trim(string(out), " \n") == "<no value>" {
-		return false
-	}
-	return true
-
-}
-
-// Check if a container is running
-func isRunning(name string) bool {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--format", "{{.State.Running}}", name).Output()
-	if err != nil {
-		return false
-	}
-	if strings.Trim(string(out), " \n") == "true" {
-		return true
-	}
-	return false
-}
-
-func isRunningOrRetry(name string, maxAttempts int, interval time.Duration) bool {
-	attempts := 0
-	for {
-		attempts++
-		if isRunning(name) {
-			return true
-		}
-
-		if attempts >= maxAttempts {
-			break
-		} else {
-			time.Sleep(interval)
-		}
-	}
-	return false
-}
-
 // Helper to run a docker command
-func runCmd(args ...interface{}) ([]byte, error) {
+func runCmd(args ...interface{}) (out []byte, err error) {
 	ses := sh.NewSession()
 
 	if logger.GetLevel() == DebugLevel {
 		ses.ShowCMD = true
 	}
 
-	out, err := ses.Command("docker", args...).Output()
+	out, err = ses.Command("docker", args...).Output()
 	Debug.Println(string(out))
 	if err != nil {
 		return out, errors.New("Error running docker command:" + err.Error())
@@ -220,10 +128,12 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	cmd := set.GetRunArguments()
 	uniqueLabel := UniqueLabelName + "=" + fmt.Sprintf("%s", cmd)
 
-
 	if attach {
+
+		beforeStart := time.Now()
+
 		cmd = append([]interface{}{"run", "-a", "stdout", "-a", "stderr", "-a", "stdin", "--sig-proxy=false", "--label", uniqueLabel}, cmd...)
-		if ses, err = set.startForegroundCommand(cmd); err != nil {
+		if ses, err = set.startLoggedCommand(cmd); err != nil {
 			return err
 		}
 		wg.Add(1)
@@ -231,14 +141,24 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 			ses.Wait()
 			wg.Done()
 		}(set.Name)
+
+		if !wasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200*time.Millisecond) {
+			return errors.New(set.Name + " failed to start")
+		}
+
+		Debug.Println("Container deemed to have started after", beforeStart)
+
+		if ! isRunning(set.Name) {
+			exitCode := containerExitCode(set.Name)
+			if exitCode != "0" {
+				return errors.New(set.Name + " exited with non-zero exit code " + exitCode)
+			}
+		}
+
 	} else {
 		cmd = append([]interface{}{"run", "-d", "--label", uniqueLabel}, cmd...)
-		if ses, err = set.startDaemonCommand(cmd); err != nil {
+		if err = set.runDaemonCommand(cmd); err != nil {
 			return err
-		}
-		err = ses.Wait()
-		if err != nil {
-			Error.Println(set.Name, "returned error:", err.Error())
 		}
 	}
 
@@ -246,7 +166,7 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	return err
 }
 
-func (set *Container) startDaemonCommand(cmd []interface{}) (*sh.Session, error) {
+func (set *Container) runDaemonCommand(cmd []interface{}) error {
 	var (
 		ses *sh.Session
 		err error
@@ -255,11 +175,11 @@ func (set *Container) startDaemonCommand(cmd []interface{}) (*sh.Session, error)
 	if logger.GetLevel() == DebugLevel {
 		ses.ShowCMD = true
 	}
-	err = ses.Command("docker", cmd...).Start()
-	return ses, err
+	err = ses.Command("docker", cmd...).Run()
+	return err
 }
 
-func (set *Container) startForegroundCommand(cmd []interface{}) (*sh.Session, error) {
+func (set *Container) startLoggedCommand(cmd []interface{}) (*sh.Session, error) {
 	ses := sh.NewSession()
 	if logger.GetLevel() == DebugLevel {
 		ses.ShowCMD = true
@@ -268,15 +188,9 @@ func (set *Container) startForegroundCommand(cmd []interface{}) (*sh.Session, er
 	ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
 	ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
 
-	if err := ses.Command("docker", cmd...).Start(); err != nil {
-		return ses, err
-	}
+	err := ses.Command("docker", cmd...).Start()
 
-	if !isRunningOrRetry(set.Name, 10, 300*time.Millisecond) {
-		return ses, errors.New(set.Name + " failed to start")
-	}
-
-	return ses, nil
+	return ses, err
 }
 
 // Create docker arg slice from container options
@@ -302,35 +216,49 @@ func (set *Container) GetRunArguments() []interface{} {
 	return cmd
 }
 
+func (set *Container) Attach(wg *sync.WaitGroup) error {
+	var (
+		err error
+		ses *sh.Session
+	)
+	if ses, err = set.startLoggedCommand(append([]interface{}{"attach", "--sig-proxy=false"}, set.Name)); err != nil {
+		return err
+	}
+	wg.Add(1)
+
+	go func(name string) {
+		ses.Wait()
+		wg.Done()
+	}(set.Name)
+	return nil
+}
+
 // Start a given container
 func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 	var (
-		ses *sh.Session
 		err error
 	)
 	set.Action = Start
+	if isRunning(set.Name) {
+		Info.Println("Already running", set.Name)
+		if attach {
+			if err = set.Attach(wg); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	if err = runHook("before.start", set); err != nil {
 		return err
 	}
+
+	if err = set.runDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
+		return err
+	}
 	if attach {
-		if ses, err = set.startDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
+		if err = set.Attach(wg); err != nil {
 			return err
-		}
-		time.Sleep(100 * time.Millisecond)
-		if ses, err = set.startForegroundCommand(append([]interface{}{"attach", "--sig-proxy=false"}, set.Name)); err != nil {
-			return err
-		}
-		wg.Add(1)
-		go func(name string) {
-			ses.Wait()
-			wg.Done()
-		}(set.Name)
-	} else {
-		if ses, err = set.startDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
-			return err
-		}
-		if err = ses.Wait(); err != nil {
-			return errors.New("Exit error for " + set.Name + ":" + err.Error())
 		}
 	}
 
