@@ -10,6 +10,8 @@ import (
 	"path"
 	"strings"
 	"unicode"
+	"github.com/byrnedo/capitan/helpers"
+"github.com/byrnedo/capitan/container"
 )
 
 type SettingsParser struct {
@@ -34,7 +36,7 @@ func (f *SettingsParser) Run() (*ProjectSettings, error) {
 	}
 
 	if cmdSlice = str.ToArgv(f.Command); len(cmdSlice) > 1 {
-		cmdArgs = toInterfaceSlice(cmdSlice[1:])
+		cmdArgs = helpers.ToInterfaceSlice(cmdSlice[1:])
 	} else {
 		cmdArgs = []interface{}{}
 	}
@@ -58,7 +60,7 @@ func (f *SettingsParser) parseOutput(out []byte) (ProjectSettings, error) {
 func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
 	//minimum of len1 at this point in parts
 
-	cmdsMap := make(map[string]Container, 0)
+	cmdsMap := make(map[string]container.Container, 0)
 
 	projName, _ := os.Getwd()
 	projName = toSnake(path.Base(projName))
@@ -93,17 +95,17 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 
 		}
 
-		container := string(lineParts[0])
+		contr := string(lineParts[0])
 
-		if _, found := cmdsMap[container]; !found {
-			cmdsMap[container] = Container{
+		if _, found := cmdsMap[contr]; !found {
+			cmdsMap[contr] = container.Container{
 				Placement: len(cmdsMap),
 				Hooks:     make(map[string]string, 0),
 			}
 		}
 
 		action := string(lineParts[1])
-		setting := cmdsMap[container]
+		setting := cmdsMap[contr]
 
 		var args string
 		if len(lineParts) > 2 {
@@ -135,7 +137,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 				alias = argParts[1]
 			}
 
-			newLink := Link{
+			newLink := container.Link{
 				Container: argParts[0],
 				Alias:     alias,
 			}
@@ -157,7 +159,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 			setting.Args = append(setting.Args, args)
 		}
 
-		cmdsMap[container] = setting
+		cmdsMap[contr] = setting
 	}
 
 	cmdsList := make(SettingsList, len(cmdsMap))

@@ -1,15 +1,16 @@
-package main
+package helpers
 
 import (
+	"errors"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"io/ioutil"
 	"strings"
 	"time"
-	"errors"
+	"github.com/byrnedo/capitan/logger"
 )
 
-func containerExitCode(containerName string) string {
+func ContainerExitCode(containerName string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.State.ExitCode}}", containerName).Output()
@@ -20,7 +21,7 @@ func containerExitCode(containerName string) string {
 	return imageId
 }
 
-func wasContainerStartedAfter(name string, afterTime time.Time) (bool, error) {
+func WasContainerStartedAfter(name string, afterTime time.Time) (bool, error) {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.State.StartedAt}}", name).Output()
@@ -41,11 +42,11 @@ func wasContainerStartedAfter(name string, afterTime time.Time) (bool, error) {
 	return afterTime.Before(startedAt), nil
 }
 
-func wasContainerStartedAfterOrRetry(name string, afterTime time.Time, maxAttempts int, interval time.Duration) bool {
+func WasContainerStartedAfterOrRetry(name string, afterTime time.Time, maxAttempts int, interval time.Duration) bool {
 	attempts := 0
 	for {
 		attempts++
-		if valid, err := wasContainerStartedAfter(name, afterTime); err == nil {
+		if valid, err := WasContainerStartedAfter(name, afterTime); err == nil {
 			Debug.Println(err)
 			return valid
 		}
@@ -60,7 +61,7 @@ func wasContainerStartedAfterOrRetry(name string, afterTime time.Time, maxAttemp
 }
 
 //Get the id for a given image name
-func getImageId(imageName string) string {
+func GetImageId(imageName string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--type", "image", "--format", "{{.Id}}", imageName).Output()
@@ -72,28 +73,13 @@ func getImageId(imageName string) string {
 }
 
 //pull the image for a given image name
-func pullImage(imageName string) error {
-	ses := sh.NewSession()
-	err := ses.Command("docker", "pull", imageName).Run()
+func PullImage(imageName string) error {
+	err := sh.Command("docker", "pull", imageName).Run()
 	return err
 }
 
-// Get the value of the label used to record the run
-// arguments used when creating the container
-func getContainerUniqueLabel(name string) string {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels."+UniqueLabelName+"}}", name).Output()
-	if err != nil {
-		return ""
-	}
-	label := strings.Trim(string(out), " \n")
-	return label
-
-}
-
 // Get the image id for a given container
-func getContainerImageId(name string) string {
+func GetContainerImageId(name string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Image}}", name).Output()
@@ -106,7 +92,7 @@ func getContainerImageId(name string) string {
 }
 
 // Checks if a container exists
-func containerExists(name string) bool {
+func ContainerExists(name string) bool {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--format", "{{.State.Running}}", name).Output()
@@ -121,7 +107,7 @@ func containerExists(name string) bool {
 }
 
 // Check if a container is running
-func isRunning(name string) bool {
+func ContainerIsRunning(name string) bool {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
 	out, err := ses.Command("docker", "inspect", "--format", "{{.State.Running}}", name).Output()
@@ -134,19 +120,19 @@ func isRunning(name string) bool {
 	return false
 }
 
-func isRunningOrRetry(name string, maxAttempts int, interval time.Duration) bool {
-	attempts := 0
-	for {
-		attempts++
-		if isRunning(name) {
-			return true
-		}
 
-		if attempts >= maxAttempts {
-			break
-		} else {
-			time.Sleep(interval)
-		}
+// Helper to run a docker command
+func RunCmd(args ...interface{}) (out []byte, err error) {
+	ses := sh.NewSession()
+
+	if logger.GetLevel() == DebugLevel {
+		ses.ShowCMD = true
 	}
-	return false
+
+	out, err = ses.Command("docker", args...).Output()
+	Debug.Println(string(out))
+	if err != nil {
+		return out, errors.New("Error running docker command:" + err.Error())
+	}
+	return out, nil
 }

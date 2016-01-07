@@ -9,6 +9,16 @@ import (
 	"sort"
 	"sync"
 	"syscall"
+"github.com/byrnedo/capitan/container"
+	"io/ioutil"
+	"strings"
+	"github.com/byrnedo/capitan/helpers"
+)
+
+const UniqueLabelName = "capitanRunCmd"
+
+var (
+	allDone        = make(chan bool, 1)
 )
 
 type ProjectSettings struct {
@@ -17,7 +27,7 @@ type ProjectSettings struct {
 	ContainerSettingsList SettingsList
 }
 
-type SettingsList []Container
+type SettingsList []container.Container
 
 func (s SettingsList) Len() int {
 	return len(s)
@@ -84,6 +94,21 @@ func (settings *ProjectSettings) LaunchCleanupWatcher() {
 	}()
 }
 
+// Get the value of the label used to record the run
+// arguments used when creating the container
+func getContainerUniqueLabel(name string) string {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels."+UniqueLabelName+"}}", name).Output()
+	if err != nil {
+		return ""
+	}
+	label := strings.Trim(string(out), " \n")
+	return label
+
+}
+
+
 // The 'up' command
 //
 // Creates a container if it doesn't exist
@@ -102,7 +127,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 		)
 
 		//create new
-		if !containerExists(set.Name) {
+		if !helpers.ContainerExists(set.Name) {
 			if err = set.Run(attach, dryRun, &wg); err != nil {
 				return err
 			}
@@ -111,8 +136,8 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 
 		// check image change or args change
 		if set.Image != "" {
-			conImage := getContainerImageId(set.Name)
-			localImage := getImageId(set.Image)
+			conImage := helpers.GetContainerImageId(set.Name)
+			localImage := helpers.GetImageId(set.Image)
 			if conImage != "" && localImage != "" && conImage != localImage {
 				// remove and restart
 				Info.Println("Removing (different image available):", set.Name)
@@ -146,7 +171,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 		}
 
 		//attach if running
-		if isRunning(set.Name) {
+		if helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already running " + set.Name)
 			if attach {
 				Info.Println("Attaching")
@@ -171,7 +196,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 
 	}
 	wg.Wait()
-	if attach {
+	if ! dryRun && attach {
 		<-allDone
 	}
 	return nil
@@ -182,7 +207,7 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 	wg := sync.WaitGroup{}
 	for _, set := range settings.ContainerSettingsList {
-		if isRunning(set.Name) {
+		if helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already running " + set.Name)
 			if attach {
 				Info.Println("Attaching")
@@ -200,7 +225,7 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 		}
 	}
 	wg.Wait()
-	if attach {
+	if ! dryRun && attach {
 		<-allDone
 	}
 	return nil
@@ -279,7 +304,7 @@ func (settings *ProjectSettings) DockerStats() error {
 // Print `docker ps` ouptut for all containers in project
 func (settings *ProjectSettings) DockerPs(args []string) error {
 	sort.Sort(settings.ContainerSettingsList)
-	allArgs := append([]interface{}{"ps"}, toInterfaceSlice(args)...)
+	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
 	for _, set := range settings.ContainerSettingsList {
 		allArgs = append(allArgs, "-f", "name="+set.Name)
 	}
@@ -287,7 +312,7 @@ func (settings *ProjectSettings) DockerPs(args []string) error {
 		err error
 		out []byte
 	)
-	if out, err = runCmd(allArgs...); err != nil {
+	if out, err = helpers.RunCmd(allArgs...); err != nil {
 		return err
 	}
 	Info.Print(string(out))
@@ -298,7 +323,7 @@ func (settings *ProjectSettings) DockerPs(args []string) error {
 func (settings *ProjectSettings) DockerKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
-		if !isRunning(set.Name) {
+		if !helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already dead:", set.Name)
 			continue
 		}
@@ -316,7 +341,7 @@ func (settings *ProjectSettings) DockerKill(args []string, dryRun bool) error {
 func (settings *ProjectSettings) DockerStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
-		if !isRunning(set.Name) {
+		if !helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already dead:", set.Name)
 			continue
 		}
@@ -335,7 +360,7 @@ func (settings *ProjectSettings) DockerRm(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
 	for _, set := range settings.ContainerSettingsList {
 
-		if !dryRun && containerExists(set.Name) {
+		if !dryRun && helpers.ContainerExists(set.Name) {
 			Info.Println("Removing " + set.Name)
 			if err := set.Rm(args); err != nil {
 				return err

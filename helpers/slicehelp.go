@@ -1,8 +1,8 @@
-package main
+package helpers
 
 import "fmt"
 
-func toStringSlice(data []interface{}) (out []string) {
+func ToStringSlice(data []interface{}) (out []string) {
 	out = make([]string, len(data))
 	for i, item := range data {
 		out[i] = fmt.Sprintf("%s", item)
@@ -10,7 +10,7 @@ func toStringSlice(data []interface{}) (out []string) {
 	return
 }
 
-func toInterfaceSlice(data []string) (out []interface{}) {
+func ToInterfaceSlice(data []string) (out []interface{}) {
 	out = make([]interface{}, len(data))
 	for i, item := range data {
 		out[i] = item

@@ -1,4 +1,4 @@
-package main
+package container
 
 import (
 	"errors"
@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/mgutz/str"
+	"github.com/byrnedo/capitan/helpers"
 )
 
 const UniqueLabelName = "capitanRunCmd"
@@ -28,7 +30,6 @@ var (
 	}
 
 	nextColorIndex = rand.Intn(len(colorList) - 1)
-	allDone        = make(chan bool, 1)
 )
 
 // Get the next color to be used in log output
@@ -58,6 +59,35 @@ const (
 	Remove  AppliedAction = "remove"
 )
 
+type Hooks map[string]string
+
+// Runs a hook command if it exists for a specific container
+func (h Hooks) Run(hookName string, containerName string) error {
+	var (
+		hookScript string
+		found      bool
+		ses        *sh.Session
+		argVs      []string
+	)
+	if hookScript, found = h[hookName]; !found {
+		return nil
+	}
+
+	ses = sh.NewSession()
+	ses.SetEnv("CAPITAN_CONTAINER_NAME", containerName)
+	ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
+
+	argVs = str.ToArgv(hookScript)
+	if len(argVs) > 1 {
+		ses.Command(argVs[0], helpers.ToInterfaceSlice(argVs[1:])...)
+	} else {
+		ses.Command(argVs[0])
+	}
+	ses.Stdout = os.Stdout
+	ses.Stderr = os.Stderr
+	return ses.Run()
+}
+
 type Container struct {
 	Name        string
 	Placement   int
@@ -71,28 +101,13 @@ type Container struct {
 	UniqueLabel string
 }
 
-// Helper to run a docker command
-func runCmd(args ...interface{}) (out []byte, err error) {
-	ses := sh.NewSession()
-
-	if logger.GetLevel() == DebugLevel {
-		ses.ShowCMD = true
-	}
-
-	out, err = ses.Command("docker", args...).Output()
-	Debug.Println(string(out))
-	if err != nil {
-		return out, errors.New("Error running docker command:" + err.Error())
-	}
-	return out, nil
-}
 
 // Builds an image for a container
 func (set *Container) BuildImage() error {
 	if err := set.Hooks.Run("before.build", set.Name); err != nil {
 		return err
 	}
-	if _, err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
+	if _, err := helpers.RunCmd("build", "--tag", set.Name, set.Build); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.build", set.Name); err != nil {
@@ -118,9 +133,9 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		err error
 	)
 
-	if getImageId(set.Image) == "" {
+	if helpers.GetImageId(set.Image) == "" {
 		Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
-		if err = pullImage(set.Image); err != nil {
+		if err = helpers.PullImage(set.Image); err != nil {
 			return err
 		}
 	}
@@ -142,14 +157,14 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 			wg.Done()
 		}(set.Name)
 
-		if !wasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200*time.Millisecond) {
+		if !helpers.WasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200*time.Millisecond) {
 			return errors.New(set.Name + " failed to start")
 		}
 
 		Debug.Println("Container deemed to have started after", beforeStart)
 
-		if ! isRunning(set.Name) {
-			exitCode := containerExitCode(set.Name)
+		if !helpers.ContainerIsRunning(set.Name) {
+			exitCode := helpers.ContainerExitCode(set.Name)
 			if exitCode != "0" {
 				return errors.New(set.Name + " exited with non-zero exit code " + exitCode)
 			}
@@ -209,10 +224,10 @@ func (set *Container) GetRunArguments() []interface{} {
 		linkArgs = append(linkArgs, "--link", linkStr)
 	}
 
-	cmd := append([]interface{}{"--name", set.Name}, toInterfaceSlice(set.Args)...)
+	cmd := append([]interface{}{"--name", set.Name}, helpers.ToInterfaceSlice(set.Args)...)
 	cmd = append(cmd, linkArgs...)
 	cmd = append(cmd, imageName)
-	cmd = append(cmd, toInterfaceSlice(set.Command)...)
+	cmd = append(cmd, helpers.ToInterfaceSlice(set.Command)...)
 	return cmd
 }
 
@@ -239,7 +254,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		err error
 	)
 	set.Action = Start
-	if isRunning(set.Name) {
+	if helpers.ContainerIsRunning(set.Name) {
 		Info.Println("Already running", set.Name)
 		if attach {
 			if err = set.Attach(wg); err != nil {
@@ -275,7 +290,7 @@ func (set *Container) Restart(args []string) error {
 		return err
 	}
 	args = append(args, set.Name)
-	if _, err := runCmd(append([]interface{}{"restart"}, toInterfaceSlice(args)...)...); err != nil {
+	if _, err := helpers.RunCmd(append([]interface{}{"restart"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.start", set.Name); err != nil {
@@ -316,7 +331,7 @@ func (set *Container) Kill(args []string) error {
 		return err
 	}
 	args = append(args, set.Name)
-	if _, err := runCmd(append([]interface{}{"kill"}, toInterfaceSlice(args)...)...); err != nil {
+	if _, err := helpers.RunCmd(append([]interface{}{"kill"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.kill", set.Name); err != nil {
@@ -333,7 +348,7 @@ func (set *Container) Stop(args []string) error {
 		return err
 	}
 	args = append(args, set.Name)
-	if _, err := runCmd(append([]interface{}{"stop"}, toInterfaceSlice(args)...)...); err != nil {
+	if _, err := helpers.RunCmd(append([]interface{}{"stop"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.stop", set.Name); err != nil {
@@ -350,7 +365,7 @@ func (set *Container) Rm(args []string) error {
 		return err
 	}
 	args = append(args, set.Name)
-	if _, err := runCmd(append([]interface{}{"rm"}, toInterfaceSlice(args)...)...); err != nil {
+	if _, err := helpers.RunCmd(append([]interface{}{"rm"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.rm", set.Name); err != nil {
