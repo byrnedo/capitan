@@ -225,7 +225,7 @@ func getSettings(settingsCmd string) (settings *ProjectSettings) {
 	var (
 		err error
 	)
-	runner := NewSettingsRunner(settingsCmd)
+	runner := NewSettingsParser(settingsCmd)
 	if settings, err = runner.Run(); err != nil {
 		Error.Printf("Error running command: %s\n", err)
 		os.Exit(1)

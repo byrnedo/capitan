@@ -9,19 +9,21 @@ import (
 	"path"
 	"strings"
 	"unicode"
+	"github.com/byrnedo/capitan/logger"
 )
 
-type SettingsRunner struct {
+type SettingsParser struct {
 	Command string
 }
 
-func NewSettingsRunner(cmd string) *SettingsRunner {
-	return &SettingsRunner{
+func NewSettingsParser(cmd string) *SettingsParser {
+	return &SettingsParser{
 		Command: cmd,
 	}
 }
 
-func (f *SettingsRunner) Run() (*ProjectSettings, error) {
+
+func (f *SettingsParser) Run() (*ProjectSettings, error) {
 	var (
 		output   []byte
 		err      error
@@ -47,64 +49,17 @@ func (f *SettingsRunner) Run() (*ProjectSettings, error) {
 
 }
 
-func (f *SettingsRunner) parseOutput(out []byte) (ProjectSettings, error) {
+func (f *SettingsParser) parseOutput(out []byte) (ProjectSettings, error) {
 	lines := bytes.Split(out, []byte{'\n'})
 	settings, err := f.parseSettings(lines)
 	return settings, err
 
 }
 
-type ProjectSettings struct {
-	ProjectName           string
-	ProjectSeparator      string
-	ContainerSettingsList SettingsList
-}
-
-type Link struct {
-	Container string
-	Alias     string
-}
-
-type AppliedAction string
-
-const (
-	Run     AppliedAction = "run"
-	Start   AppliedAction = "start"
-	Stop    AppliedAction = "stop"
-	Kill    AppliedAction = "kill"
-	Restart AppliedAction = "restart"
-	Remove  AppliedAction = "remove"
-)
-
-type ContainerSettings struct {
-	Name        string
-	Placement   int
-	Args        []string
-	Image       string
-	Build       string
-	Command     []string
-	Links       []Link
-	Hooks       map[string]string
-	Action      AppliedAction // used in commands
-	UniqueLabel string
-}
-
-type SettingsList []ContainerSettings
-
-func (s SettingsList) Len() int {
-	return len(s)
-}
-func (s SettingsList) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s SettingsList) Less(i, j int) bool {
-	return s[i].Placement < s[j].Placement
-}
-
-func (f *SettingsRunner) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
+func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
 	//minimum of len1 at this point in parts
 
-	cmdsMap := make(map[string]ContainerSettings, 0)
+	cmdsMap := make(map[string]Container, 0)
 
 	projName, _ := os.Getwd()
 	projName = toSnake(path.Base(projName))
@@ -142,7 +97,7 @@ func (f *SettingsRunner) parseSettings(lines [][]byte) (projSettings ProjectSett
 		container := string(lineParts[0])
 
 		if _, found := cmdsMap[container]; !found {
-			cmdsMap[container] = ContainerSettings{
+			cmdsMap[container] = Container{
 				Placement: len(cmdsMap),
 				Hooks:     make(map[string]string, 0),
 			}
@@ -210,6 +165,10 @@ func (f *SettingsRunner) parseSettings(lines [][]byte) (projSettings ProjectSett
 	var count = 0
 	for name, item := range cmdsMap {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
+		// Hack for logging prefix width alignment, eg 'some_container | blahbla'
+		if len(item.Name) > logger.LongestContainerName {
+			logger.LongestContainerName = len(item.Name)
+		}
 		for i, link := range item.Links {
 			link.Container = projSettings.ProjectName + projSettings.ProjectSeparator + link.Container
 			item.Links[i] = link
