@@ -88,17 +88,29 @@ func (h Hooks) Run(hookName string, containerName string) error {
 }
 
 type Container struct {
-	Name        string
-	Placement   int
-	Args        []string
-	Image       string
-	Build       string
-	Command     []string
-	Links       []Link
-	Hooks       Hooks
-	Action      AppliedAction // used in commands
+	Name string
+	// the order defined in the config output
+	Placement int
+	// arguments to container
+	Args []string
+	// image to use
+	Image string
+	// if supplied will do docker build on this path
+	Build string
+	// command for container
+	Command []string
+	// links
+	Links []Link
+	// hooks map for this definition
+	Hooks Hooks
+	// used in commands
+	Action AppliedAction
+	// unique label of run commands
 	UniqueLabel string
-	Scale 		int
+	// the total number of containers to scale to.
+	Scale int
+	// the instance number
+	ContainerNumber int
 }
 
 // Builds an image for a container
@@ -269,6 +281,7 @@ func (set *Container) Attach(wg *sync.WaitGroup) error {
 }
 
 // Start a given container
+// TODO needs to respect scale
 func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 	var (
 		err error
@@ -304,6 +317,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 }
 
 // Restart the container
+// TODO needs to respect scale
 func (set *Container) Restart(args []string) error {
 	set.Action = Restart
 	if err := set.Hooks.Run("before.start", set.Name); err != nil {
@@ -320,6 +334,7 @@ func (set *Container) Restart(args []string) error {
 }
 
 // Returns a containers IP
+// TODO needs to respect scale
 func (set *Container) IP() string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
@@ -332,6 +347,7 @@ func (set *Container) IP() string {
 }
 
 // Start streaming a container's logs
+// TODO needs to respect scale
 func (set *Container) Logs() (*sh.Session, error) {
 	color := nextColor()
 	ses := sh.NewSession()
@@ -345,6 +361,7 @@ func (set *Container) Logs() (*sh.Session, error) {
 }
 
 // Kills the container
+// TODO needs to respect scale
 func (set *Container) Kill(args []string) error {
 	set.Action = Kill
 	if err := set.Hooks.Run("before.kill", set.Name); err != nil {
@@ -362,6 +379,7 @@ func (set *Container) Kill(args []string) error {
 }
 
 // Stops the container
+// TODO needs to respect scale
 func (set *Container) Stop(args []string) error {
 	set.Action = Stop
 	if err := set.Hooks.Run("before.stop", set.Name); err != nil {
@@ -378,6 +396,7 @@ func (set *Container) Stop(args []string) error {
 }
 
 // Removes the container
+// TODO needs to respect scale
 func (set *Container) Rm(args []string) error {
 
 	set.Action = Remove

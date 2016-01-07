@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/byrnedo/capitan/container"
 	"github.com/byrnedo/capitan/helpers"
 	"github.com/byrnedo/capitan/logger"
@@ -10,10 +11,9 @@ import (
 	"github.com/mgutz/str"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"unicode"
-	"strconv"
-	"fmt"
 )
 
 type SettingsParser struct {
@@ -103,7 +103,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 			cmdsMap[contr] = container.Container{
 				Placement: len(cmdsMap),
 				Hooks:     make(map[string]string, 0),
-				Scale: 		1,
+				Scale:     1,
 			}
 		}
 
@@ -127,7 +127,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 			if len(args) > 0 {
 				scale, err := strconv.Atoi(args)
 				if err != nil {
-					return projSettings, errors.New(fmt.Sprintf("Failed to parse `scale` on line %d, %s", lineNum + 1,err))
+					return projSettings, errors.New(fmt.Sprintf("Failed to parse `scale` on line %d, %s", lineNum+1, err))
 				}
 				if scale < 1 {
 					scale = 1
@@ -176,6 +176,8 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 		cmdsMap[contr] = setting
 	}
 
+	// Post process
+	// TODO duplicate containers for scaling
 	cmdsList := make(SettingsList, len(cmdsMap))
 	var count = 0
 	for name, item := range cmdsMap {
