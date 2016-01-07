@@ -3,6 +3,7 @@ package container
 import (
 	"errors"
 	"fmt"
+	. "github.com/byrnedo/capitan/consts"
 	"github.com/byrnedo/capitan/helpers"
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
@@ -15,8 +16,6 @@ import (
 	"sync"
 	"time"
 )
-
-const UniqueLabelName = "capitanRunCmd"
 
 var (
 	colorList = []string{
@@ -115,6 +114,48 @@ func (set *Container) BuildImage() error {
 	return nil
 }
 
+func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) error {
+
+	var (
+		ses *sh.Session
+		err error
+	)
+
+	beforeStart := time.Now()
+
+	cmd = append([]interface{}{
+		"run",
+		"-a", "stdout",
+		"-a", "stderr",
+		"-a", "stdin",
+		"--sig-proxy=false",
+	}, cmd...)
+	if ses, err = set.startLoggedCommand(cmd); err != nil {
+		return err
+	}
+	wg.Add(1)
+	go func(name string) {
+		ses.Wait()
+		wg.Done()
+	}(set.Name)
+
+	if !helpers.WasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200*time.Millisecond) {
+		return errors.New(set.Name + " failed to start")
+	}
+
+	Debug.Println("Container deemed to have started after", beforeStart)
+
+	if !helpers.ContainerIsRunning(set.Name) {
+		exitCode := helpers.ContainerExitCode(set.Name)
+		if exitCode != "0" {
+			return errors.New(set.Name + " exited with non-zero exit code " + exitCode)
+		}
+	}
+
+	return nil
+
+}
+
 // Run a container
 func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	set.Action = Run
@@ -127,60 +168,39 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	var (
-		ses *sh.Session
-		err error
-	)
-
 	if helpers.GetImageId(set.Image) == "" {
 		Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
-		if err = helpers.PullImage(set.Image); err != nil {
+		if err := helpers.PullImage(set.Image); err != nil {
 			return err
 		}
 	}
 
 	cmd := set.GetRunArguments()
-	uniqueLabel := UniqueLabelName + "=" + fmt.Sprintf("%s", cmd)
+	labels := []interface{}{
+		"--label",
+		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
+		"--label",
+		ServiceLabelName + "=" + set.Name,
+	}
+	cmd = append(labels, cmd...)
 
 	if attach {
 
-		beforeStart := time.Now()
-
-		cmd = append([]interface{}{"run", "-a", "stdout", "-a", "stderr", "-a", "stdin", "--sig-proxy=false", "--label", uniqueLabel}, cmd...)
-		if ses, err = set.startLoggedCommand(cmd); err != nil {
+		if err := set.runInForeground(cmd, wg); err != nil {
 			return err
-		}
-		wg.Add(1)
-		go func(name string) {
-			ses.Wait()
-			wg.Done()
-		}(set.Name)
-
-		if !helpers.WasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200*time.Millisecond) {
-			return errors.New(set.Name + " failed to start")
-		}
-
-		Debug.Println("Container deemed to have started after", beforeStart)
-
-		if !helpers.ContainerIsRunning(set.Name) {
-			exitCode := helpers.ContainerExitCode(set.Name)
-			if exitCode != "0" {
-				return errors.New(set.Name + " exited with non-zero exit code " + exitCode)
-			}
 		}
 
 	} else {
-		cmd = append([]interface{}{"run", "-d", "--label", uniqueLabel}, cmd...)
-		if err = set.runDaemonCommand(cmd); err != nil {
+		cmd = append([]interface{}{"run", "-d"}, cmd...)
+		if err := set.launchDaemonCommand(cmd); err != nil {
 			return err
 		}
 	}
 
-	err = set.Hooks.Run("after.run", set.Name)
-	return err
+	return set.Hooks.Run("after.run", set.Name)
 }
 
-func (set *Container) runDaemonCommand(cmd []interface{}) error {
+func (set *Container) launchDaemonCommand(cmd []interface{}) error {
 	var (
 		ses *sh.Session
 		err error
@@ -267,7 +287,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	if err = set.runDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
+	if err = set.launchDaemonCommand(append([]interface{}{"start"}, set.Name)); err != nil {
 		return err
 	}
 	if attach {

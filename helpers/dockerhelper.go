@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	. "github.com/byrnedo/capitan/consts"
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
@@ -134,4 +135,27 @@ func RunCmd(args ...interface{}) (out []byte, err error) {
 		return out, errors.New("Error running docker command:" + err.Error())
 	}
 	return out, nil
+}
+
+// Get the value of the label used to record the run
+// arguments used when creating the container
+func GetContainerUniqueLabel(name string) string {
+	return getLabel(UniqueLabelName, name)
+}
+
+// Get the value of the label used to record the run
+// service name (for scaling)
+func GetContainerServiceNameLabel(name string) string {
+	return getLabel(ServiceLabelName, name)
+}
+
+func getLabel(label string, container string) string {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels."+label+"}}", container).Output()
+	if err != nil {
+		return ""
+	}
+	value := strings.Trim(string(out), " \n")
+	return value
 }

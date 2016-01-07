@@ -6,16 +6,12 @@ import (
 	"github.com/byrnedo/capitan/helpers"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"sort"
-	"strings"
 	"sync"
 	"syscall"
 )
-
-const UniqueLabelName = "capitanRunCmd"
 
 var (
 	allDone = make(chan bool, 1)
@@ -94,20 +90,6 @@ func (settings *ProjectSettings) LaunchCleanupWatcher() {
 	}()
 }
 
-// Get the value of the label used to record the run
-// arguments used when creating the container
-func getContainerUniqueLabel(name string) string {
-	ses := sh.NewSession()
-	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.Config.Labels."+UniqueLabelName+"}}", name).Output()
-	if err != nil {
-		return ""
-	}
-	label := strings.Trim(string(out), " \n")
-	return label
-
-}
-
 // The 'up' command
 //
 // Creates a container if it doesn't exist
@@ -153,7 +135,7 @@ func (settings *ProjectSettings) CapitanUp(attach bool, dryRun bool) error {
 				continue
 			}
 			uniqueLabel := fmt.Sprintf("%s", set.GetRunArguments())
-			if getContainerUniqueLabel(set.Name) != uniqueLabel {
+			if helpers.GetContainerUniqueLabel(set.Name) != uniqueLabel {
 				// remove and restart
 				Info.Println("Removing (run arguments changed):", set.Name)
 				if !dryRun {
