@@ -3,17 +3,17 @@ package container
 import (
 	"errors"
 	"fmt"
+	"github.com/byrnedo/capitan/helpers"
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
+	"github.com/mgutz/str"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
 	"sync"
 	"time"
-	"github.com/mgutz/str"
-	"github.com/byrnedo/capitan/helpers"
 )
 
 const UniqueLabelName = "capitanRunCmd"
@@ -100,7 +100,6 @@ type Container struct {
 	Action      AppliedAction // used in commands
 	UniqueLabel string
 }
-
 
 // Builds an image for a container
 func (set *Container) BuildImage() error {

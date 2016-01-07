@@ -2,23 +2,23 @@ package main
 
 import (
 	"fmt"
+	"github.com/byrnedo/capitan/container"
+	"github.com/byrnedo/capitan/helpers"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
-"github.com/byrnedo/capitan/container"
-	"io/ioutil"
-	"strings"
-	"github.com/byrnedo/capitan/helpers"
 )
 
 const UniqueLabelName = "capitanRunCmd"
 
 var (
-	allDone        = make(chan bool, 1)
+	allDone = make(chan bool, 1)
 )
 
 type ProjectSettings struct {
@@ -108,7 +108,6 @@ func getContainerUniqueLabel(name string) string {
 
 }
 
-
 // The 'up' command
 //
 // Creates a container if it doesn't exist
@@ -196,7 +195,7 @@ func (settings *ProjectSettings) DockerUp(attach bool, dryRun bool) error {
 
 	}
 	wg.Wait()
-	if ! dryRun && attach {
+	if !dryRun && attach {
 		<-allDone
 	}
 	return nil
@@ -225,7 +224,7 @@ func (settings *ProjectSettings) DockerStart(attach bool, dryRun bool) error {
 		}
 	}
 	wg.Wait()
-	if ! dryRun && attach {
+	if !dryRun && attach {
 		<-allDone
 	}
 	return nil

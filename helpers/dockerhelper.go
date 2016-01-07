@@ -2,12 +2,12 @@ package helpers
 
 import (
 	"errors"
+	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"io/ioutil"
 	"strings"
 	"time"
-	"github.com/byrnedo/capitan/logger"
 )
 
 func ContainerExitCode(containerName string) string {
@@ -119,7 +119,6 @@ func ContainerIsRunning(name string) bool {
 	}
 	return false
 }
-
 
 // Helper to run a docker command
 func RunCmd(args ...interface{}) (out []byte, err error) {

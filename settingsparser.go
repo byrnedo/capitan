@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
+	"github.com/byrnedo/capitan/container"
+	"github.com/byrnedo/capitan/helpers"
 	"github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
@@ -10,8 +12,6 @@ import (
 	"path"
 	"strings"
 	"unicode"
-	"github.com/byrnedo/capitan/helpers"
-"github.com/byrnedo/capitan/container"
 )
 
 type SettingsParser struct {
