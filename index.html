@@ -50,11 +50,14 @@ This means it will basically work with all versions of docker.</p>
 <li>Shell Support - Config is read from stdout of a shell command. Extremely flexible</li>
 <li>Hooks - hooks for before and after every intrusive action</li>
 <li>Predictable run sequence - containers started in order defined</li>
-<li>Future proof - options are passed through to docker cli, very simple.</li>
+<li>Future proof - options are passed through on most commands to docker cli, very simple.</li>
 </ol>
 
 <h2>
 <a id="commands" class="anchor" href="#commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Commands</h2>
+
+<h3>
+<a id="invasive-commands" class="anchor" href="#invasive-commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Invasive commands</h3>
 
 <ul>
 <li>
@@ -68,18 +71,67 @@ This means it will basically work with all versions of docker.</p>
 <li>Container config has changed</li>
 </ol>
 </li>
-<li>Starts stopped containers</li>
+<li><p>Starts stopped containers</p></li>
+<li><p>Optionally can attach to output using <code>--attach|-a</code> flag.</p></li>
 </ul>
 </li>
-<li><p><code>capitan ps</code>      Show container status</p></li>
+<li>
+<p><code>capitan start</code>   Start stopped containers</p>
+
+<ul>
+<li>Optionally can attach to output using <code>--attach|-a</code> flag.</li>
+</ul>
+</li>
+<li>
+<p><code>capitan restart</code> Restart containers</p>
+
+<ul>
+<li>Further arguments passed through to docker, example <code>capitan start -t 5</code>
+</li>
+</ul>
+</li>
+<li>
+<p><code>capitan stop</code>    Stop running containers</p>
+
+<ul>
+<li>Further arguments passed through to docker, example <code>capitan stop -t 5</code>
+</li>
+</ul>
+</li>
+<li>
+<p><code>capitan kill</code>    Kill running containers using SIGKILL or a specified signal</p>
+
+<ul>
+<li>Further arguments passed through to docker, example <code>capitan kill --signal KILL</code>
+</li>
+</ul>
+</li>
+<li>
+<p><code>capitan rm</code>      Remove stopped containers</p>
+
+<ul>
+<li>Further arguments passed through to docker, example <code>capitan rm -f</code>
+</li>
+</ul>
+</li>
+</ul>
+
+<h3>
+<a id="non-invasive-commands" class="anchor" href="#non-invasive-commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Non invasive commands</h3>
+
+<ul>
+<li>
+<p><code>capitan ps</code>      Show container status</p>
+
+<ul>
+<li>Further arguments passed through to docker, example <code>capitan ps -a</code>
+</li>
+</ul>
+</li>
 <li><p><code>capitan ip</code>      Show container ip addresses</p></li>
-<li><p><code>capitan log</code>     Follow container logs</p></li>
+<li><p><code>capitan logs</code>    Follow container logs</p></li>
+<li><p><code>capitan pull</code>    Pull images for all containers</p></li>
 <li><p><code>capitan build</code>   Build any containers with 'build' flag set (WIP)</p></li>
-<li><p><code>capitan start</code>   Start stopped containers</p></li>
-<li><p><code>capitan restart</code> Restart containers</p></li>
-<li><p><code>capitan stop</code>    Stop running containers</p></li>
-<li><p><code>capitan kill</code>    Kill running containers using SIGKILL or a specified signal</p></li>
-<li><p><code>capitan rm</code>      Remove stopped containers</p></li>
 </ul>
 
 <h2>
@@ -107,22 +159,64 @@ You could use any command which generates a valid config. It doesn't have to be 
 
 <p>All commands are passed through to docker cli as <code>--COMMAND</code> EXCEPT the following:</p>
 
-<ul>
-<li><p><code>build</code>: This allows a path to be given for a dockerfile.</p></li>
-<li>
-<p><code>hook</code>: Allows for a custom shell command to be evaluated at the following points:</p>
+<h4>
+<a id="build" class="anchor" href="#build" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>build</code>
+</h4>
+
+<p>This allows a path to be given for a dockerfile.</p>
+
+<h4>
+<a id="hook" class="anchor" href="#hook" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>hook</code>
+</h4>
+
+<p>Allows for a custom shell command to be evaluated at the following points:</p>
 
 <ul>
-<li>Before/After Run (<code>before.run</code>, <code>after.run</code>)</li>
-<li>Before/After Start (<code>before.start</code>, <code>after.start</code>)</li>
-<li>Before/After Stop (<code>before.stop</code>, <code>after.stop</code>)</li>
-<li>Before/After Kill (<code>before.kill</code>, <code>after.kill</code>)</li>
-<li>Before/After Rm (<code>before.rm</code>, <code>after.rm</code>)</li>
+<li>Before/After Run (<code>before.run</code>, <code>after.run</code>)
+
+<ul>
+<li>This occurs during the <code>up</code> command</li>
 </ul>
 </li>
-<li><p><code>global project</code>: The project name, defaults to current working directory</p></li>
-<li><p><code>global project_sep</code>: String to use to create container name from <code>project</code> and name specified in config</p></li>
+<li>Before/After Start (<code>before.start</code>, <code>after.start</code>)
+
+<ul>
+<li>This will occur in the <code>up</code>, <code>start</code> and <code>restart</code> command</li>
 </ul>
+</li>
+<li>Before/After Stop (<code>before.stop</code>, <code>after.stop</code>)
+
+<ul>
+<li>This will occur in the <code>stop</code> command only</li>
+</ul>
+</li>
+<li>Before/After Kill (<code>before.kill</code>, <code>after.kill</code>)
+
+<ul>
+<li>This will occur in the <code>kill</code> command only</li>
+</ul>
+</li>
+<li>Before/After Rm (<code>before.rm</code>, <code>after.rm</code>)
+
+<ul>
+<li>This will occur in the <code>up</code> and <code>rm</code> command</li>
+</ul>
+</li>
+</ul>
+
+<p><em>NOTE</em> hooks do not conform exactly to each command. Example: an <code>up</code> command may <code>rm</code> and then <code>run</code> a container OR just <code>start</code> a stopped container.</p>
+
+<h4>
+<a id="global-project" class="anchor" href="#global-project" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>global project</code>
+</h4>
+
+<p>The project name, defaults to current working directory</p>
+
+<h4>
+<a id="global-project_sep" class="anchor" href="#global-project_sep" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>global project_sep</code>
+</h4>
+
+<p>String to use to create container name from <code>project</code> and name specified in config</p>
 
 <h3>
 <a id="example-config-" class="anchor" href="#example-config-" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example Config :</h3>
@@ -138,6 +232,7 @@ redis image redis:latest
 redis hostname ${PREFIX}_redis
 redis publish 6379
 redis hook after.run sleep 10
+redis hook after.start sleep 10
 
 #
 # General mongodb container
@@ -148,13 +243,25 @@ mongo hostname ${PREFIX}_mongo
 mongo publish 27017
 
 #
-# General nats container
+# My app
 #
-nats image nats:latest
-nats hostname ${PREFIX}_nats
-nats publish 4222
+app build ./
+app publish 80
+app link redis
+app link mongo:mongodb
 EOF
 </code></pre>
+
+<h2>
+<a id="roadmap" class="anchor" href="#roadmap" aria-hidden="true"><span class="octicon octicon-link"></span></a>Roadmap</h2>
+
+<ol>
+<li>Tests</li>
+<li>Scaling (multiple instances of same container)</li>
+<li>More efficient <code>up</code> logic</li>
+<li>Helpful aliases in shell env.</li>
+<li>More flexible <code>build</code> command</li>
+</ol>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/byrnedo/capitan">Capitan</a> is maintained by <a href="https://github.com/byrnedo">byrnedo</a>.</span>
