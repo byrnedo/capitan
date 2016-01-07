@@ -24,34 +24,10 @@
 
 <p>Capitan is a tool for managing multiple Docker containers based largely on <a href="https://github.com/polonskiy/crowdr">crowdr</a></p>
 
-<p>Capitan is only a wrapper around the docker cli tool, no api usage whatsoever.
+<p>Capitan is only a wrapper around the docker cli tool, no api usage whatsoever (well... an <code>inspect</code> command here and there).
 This means it will basically work with all versions of docker.</p>
 
-<h2>
-<a id="why-not-docker-compose" class="anchor" href="#why-not-docker-compose" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why not docker-compose?</h2>
-
-<ol>
-<li>lack of variables</li>
-<li>options support is always behind actual docker version</li>
-<li>up restarts containers in wrong order</li>
-<li>no hooks system</li>
-<li>hasslefree replacement for non x86/x86_64 architectures</li>
-</ol>
-
-<h2>
-<a id="why-not-crowdr" class="anchor" href="#why-not-crowdr" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why not crowdr?</h2>
-
-<p>Written totally in bash. I love bash but I personally feel safer with go. That is all.</p>
-
-<h2>
-<a id="capitan-features" class="anchor" href="#capitan-features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Capitan Features</h2>
-
-<ol>
-<li>Shell Support - Config is read from stdout of a shell command. Extremely flexible</li>
-<li>Hooks - hooks for before and after every intrusive action</li>
-<li>Predictable run sequence - containers started in order defined</li>
-<li>Future proof - options are passed through on most commands to docker cli, very simple.</li>
-</ol>
+<p><img src="output.gif" alt="Capitan showcase"></p>
 
 <h2>
 <a id="commands" class="anchor" href="#commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Commands</h2>
@@ -135,7 +111,39 @@ This means it will basically work with all versions of docker.</p>
 </ul>
 
 <h2>
-<a id="global-options" class="anchor" href="#global-options" aria-hidden="true"><span class="octicon octicon-link"></span></a>Global options</h2>
+<a id="why" class="anchor" href="#why" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why...</h2>
+
+<h3>
+<a id="not-docker-compose" class="anchor" href="#not-docker-compose" aria-hidden="true"><span class="octicon octicon-link"></span></a>...not docker-compose?</h3>
+
+<ol>
+<li>lack of variables</li>
+<li>options support is always behind actual docker version</li>
+<li>up restarts containers in wrong order</li>
+<li>no hooks system</li>
+<li>hassle free replacement for non x86/x86_64 architectures</li>
+</ol>
+
+<h3>
+<a id="not-crowdr" class="anchor" href="#not-crowdr" aria-hidden="true"><span class="octicon octicon-link"></span></a>...not crowdr?</h3>
+
+<p>Written totally in bash. I love bash but I personally feel safer with go. That is all.</p>
+
+<h2>
+<a id="capitan-features" class="anchor" href="#capitan-features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Capitan Features</h2>
+
+<ol>
+<li>Shell Support - Config is read from stdout of a shell command. Extremely flexible</li>
+<li>Hooks - hooks for before and after every intrusive action</li>
+<li>Predictable run sequence - containers started in order defined</li>
+<li>Future proof - options are passed through on most commands to docker cli, very simple.</li>
+</ol>
+
+<h2>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h2>
+
+<h3>
+<a id="global-options" class="anchor" href="#global-options" aria-hidden="true"><span class="octicon octicon-link"></span></a>Global options</h3>
 
 <pre><code> --cmd, -c "./capitan.cfg.sh"   command used to obtain config
  --debug, -d                    print extra log messages
@@ -144,17 +152,18 @@ This means it will basically work with all versions of docker.</p>
  --version, -v                  print the version
 </code></pre>
 
-<h2>
-<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h2>
+<h3>
+<a id="config-fileoutput" class="anchor" href="#config-fileoutput" aria-hidden="true"><span class="octicon octicon-link"></span></a>Config file/output</h3>
 
-<p>Services are described in the config output which is read from stdout.
-You could use any command which generates a valid config. It doesn't have to be a bash script like in the example.</p>
+<p>Service config is read from stdout of the command defined with <code>--cmd</code> .</p>
 
 <p><code>capitan</code> by default runs the command <code>./capitan.cfg.sh</code> in the current directory to get the config. This can be customized with <code>-c</code> flag.</p>
 
-<p>The output format is:</p>
+<p>You could use any command which generates a valid config. It doesn't have to be a bash script like in the example or default.</p>
 
-<pre><code>CONTAINER_NAME COMMAND ARGS
+<p>The output format must be:</p>
+
+<pre><code>CONTAINER_NAME COMMAND [ARGS...]
 </code></pre>
 
 <p>All commands are passed through to docker cli as <code>--COMMAND</code> EXCEPT the following:</p>
