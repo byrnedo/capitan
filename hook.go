@@ -6,20 +6,21 @@ import (
 	"os"
 )
 
+type Hooks map[string]string
 // Runs a hook command if it exists for a specific container
-func runHook(hookName string, settings *Container) error {
+func (h Hooks) Run(hookName string, containerName string) error {
 	var (
 		hookScript string
 		found      bool
 		ses        *sh.Session
 		argVs      []string
 	)
-	if hookScript, found = settings.Hooks[hookName]; !found {
+	if hookScript, found = h[hookName]; !found {
 		return nil
 	}
 
 	ses = sh.NewSession()
-	ses.SetEnv("CAPITAN_CONTAINER_NAME", settings.Name)
+	ses.SetEnv("CAPITAN_CONTAINER_NAME", containerName)
 	ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
 
 	argVs = str.ToArgv(hookScript)

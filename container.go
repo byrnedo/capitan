@@ -66,7 +66,7 @@ type Container struct {
 	Build       string
 	Command     []string
 	Links       []Link
-	Hooks       map[string]string
+	Hooks       Hooks
 	Action      AppliedAction // used in commands
 	UniqueLabel string
 }
@@ -89,13 +89,13 @@ func runCmd(args ...interface{}) (out []byte, err error) {
 
 // Builds an image for a container
 func (set *Container) BuildImage() error {
-	if err := runHook("before.build", set); err != nil {
+	if err := set.Hooks.Run("before.build", set.Name); err != nil {
 		return err
 	}
 	if _, err := runCmd("build", "--tag", set.Name, set.Build); err != nil {
 		return err
 	}
-	if err := runHook("after.build", set); err != nil {
+	if err := set.Hooks.Run("after.build", set.Name); err != nil {
 		return err
 	}
 	return nil
@@ -109,7 +109,7 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	if dryRun {
 		return nil
 	}
-	if err := runHook("before.run", set); err != nil {
+	if err := set.Hooks.Run("before.run", set.Name); err != nil {
 		return err
 	}
 
@@ -162,7 +162,7 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		}
 	}
 
-	err = runHook("after.run", set)
+	err = set.Hooks.Run("after.run", set.Name)
 	return err
 }
 
@@ -249,7 +249,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		return nil
 	}
 
-	if err = runHook("before.start", set); err != nil {
+	if err = set.Hooks.Run("before.start", set.Name); err != nil {
 		return err
 	}
 
@@ -262,7 +262,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		}
 	}
 
-	if err := runHook("after.start", set); err != nil {
+	if err := set.Hooks.Run("after.start", set.Name); err != nil {
 		return err
 	}
 	return nil
@@ -271,14 +271,14 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 // Restart the container
 func (set *Container) Restart(args []string) error {
 	set.Action = Restart
-	if err := runHook("before.start", set); err != nil {
+	if err := set.Hooks.Run("before.start", set.Name); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := runCmd(append([]interface{}{"restart"}, toInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := runHook("after.start", set); err != nil {
+	if err := set.Hooks.Run("after.start", set.Name); err != nil {
 		return err
 	}
 	return nil
@@ -312,14 +312,14 @@ func (set *Container) Logs() (*sh.Session, error) {
 // Kills the container
 func (set *Container) Kill(args []string) error {
 	set.Action = Kill
-	if err := runHook("before.kill", set); err != nil {
+	if err := set.Hooks.Run("before.kill", set.Name); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := runCmd(append([]interface{}{"kill"}, toInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := runHook("after.kill", set); err != nil {
+	if err := set.Hooks.Run("after.kill", set.Name); err != nil {
 		return err
 	}
 	return nil
@@ -329,14 +329,14 @@ func (set *Container) Kill(args []string) error {
 // Stops the container
 func (set *Container) Stop(args []string) error {
 	set.Action = Stop
-	if err := runHook("before.stop", set); err != nil {
+	if err := set.Hooks.Run("before.stop", set.Name); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := runCmd(append([]interface{}{"stop"}, toInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := runHook("after.stop", set); err != nil {
+	if err := set.Hooks.Run("after.stop", set.Name); err != nil {
 		return err
 	}
 	return nil
@@ -346,14 +346,14 @@ func (set *Container) Stop(args []string) error {
 func (set *Container) Rm(args []string) error {
 
 	set.Action = Remove
-	if err := runHook("before.rm", set); err != nil {
+	if err := set.Hooks.Run("before.rm", set.Name); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := runCmd(append([]interface{}{"rm"}, toInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := runHook("after.rm", set); err != nil {
+	if err := set.Hooks.Run("after.rm", set.Name); err != nil {
 		return err
 	}
 	return nil
