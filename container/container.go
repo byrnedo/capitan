@@ -98,6 +98,7 @@ type Container struct {
 	Hooks       Hooks
 	Action      AppliedAction // used in commands
 	UniqueLabel string
+	Scale 		int
 }
 
 // Builds an image for a container

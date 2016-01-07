@@ -12,6 +12,8 @@ import (
 	"path"
 	"strings"
 	"unicode"
+	"strconv"
+	"fmt"
 )
 
 type SettingsParser struct {
@@ -69,7 +71,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 
 	projSettings.ProjectSeparator = "_"
 
-	for _, line := range lines {
+	for lineNum, line := range lines {
 
 		line = bytes.TrimLeft(line, " ")
 		if len(line) == 0 || line[0] == '#' {
@@ -101,6 +103,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 			cmdsMap[contr] = container.Container{
 				Placement: len(cmdsMap),
 				Hooks:     make(map[string]string, 0),
+				Scale: 		1,
 			}
 		}
 
@@ -119,6 +122,17 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 				for _, arg := range parsedArgs {
 					setting.Command = append(setting.Command, arg)
 				}
+			}
+		case "scale":
+			if len(args) > 0 {
+				scale, err := strconv.Atoi(args)
+				if err != nil {
+					return projSettings, errors.New(fmt.Sprintf("Failed to parse `scale` on line %d, %s", lineNum + 1,err))
+				}
+				if scale < 1 {
+					scale = 1
+				}
+				setting.Scale = scale
 			}
 		case "image":
 			if len(args) > 0 {
