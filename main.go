@@ -77,54 +77,13 @@ func main() {
 			},
 		},
 		{
-			Name:            "ps",
-			Aliases:         []string{},
-			Usage:           "Show container status",
-			SkipFlagParsing: true,
-			Action: func(c *cli.Context) {
-				settings := getSettings(command)
-				if err := settings.CapitanPs(c.Args()); err != nil {
-					Error.Println("Ps failed:", err)
-					os.Exit(1)
-				}
-
-			},
-		},
-		{
-			Name:            "ip",
-			Aliases:         []string{},
-			Usage:           "Show container ip addresses",
-			SkipFlagParsing: true,
-			Action: func(c *cli.Context) {
-				settings := getSettings(command)
-				if err := settings.CapitanIP(); err != nil {
-					Error.Println("IP failed:", err)
-					os.Exit(1)
-				}
-
-			},
-		},
-		{
-			Name:    "build",
+			Name:    "create",
 			Aliases: []string{},
-			Usage:   "Build any containers with 'build' flag set",
+			Usage:   "Create containers, but don't run them",
 			Action: func(c *cli.Context) {
 				settings := getSettings(command)
-				if err := settings.CapitanBuild(dryRun); err != nil {
-					Error.Println("Build failed:", err)
-					os.Exit(1)
-				}
-
-			},
-		},
-		{
-			Name:    "pull",
-			Aliases: []string{},
-			Usage:   "Pull all images defined in project",
-			Action: func(c *cli.Context) {
-				settings := getSettings(command)
-				if err := settings.CapitanPull(dryRun); err != nil {
-					Error.Println("Pull failed:", err)
+				if err := settings.CapitanCreate(dryRun); err != nil {
+					Error.Println("Create failed:", err)
 					os.Exit(1)
 				}
 
@@ -203,6 +162,60 @@ func main() {
 					Error.Println("Rm failed:", err)
 					os.Exit(1)
 				}
+			},
+		},
+		{
+			Name:            "ps",
+			Aliases:         []string{},
+			Usage:           "Show container status",
+			SkipFlagParsing: true,
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := settings.CapitanPs(c.Args()); err != nil {
+					Error.Println("Ps failed:", err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
+			Name:            "ip",
+			Aliases:         []string{},
+			Usage:           "Show container ip addresses",
+			SkipFlagParsing: true,
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := settings.CapitanIP(); err != nil {
+					Error.Println("IP failed:", err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
+			Name:    "build",
+			Aliases: []string{},
+			Usage:   "Build any containers with 'build' flag set",
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := settings.CapitanBuild(dryRun); err != nil {
+					Error.Println("Build failed:", err)
+					os.Exit(1)
+				}
+
+			},
+		},
+		{
+			Name:    "pull",
+			Aliases: []string{},
+			Usage:   "Pull all images defined in project",
+			Action: func(c *cli.Context) {
+				settings := getSettings(command)
+				if err := settings.CapitanPull(dryRun); err != nil {
+					Error.Println("Pull failed:", err)
+					os.Exit(1)
+				}
+
 			},
 		},
 		{

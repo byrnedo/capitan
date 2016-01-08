@@ -111,6 +111,18 @@ func haveArgsChanged(container string, runArgs []interface{}) bool {
 
 }
 
+func (settings *ProjectSettings) CapitanCreate(dryRun bool) error {
+	sort.Sort(settings.ContainerSettingsList)
+
+	for _, set := range settings.ContainerSettingsList {
+		if err := set.Create(dryRun); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
 // The 'up' command
 //
 // Creates a container if it doesn't exist

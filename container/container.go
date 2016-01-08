@@ -183,6 +183,35 @@ func (set *Container) RecreateAndRun(attach bool, dryRun bool, wg *sync.WaitGrou
 }
 
 // Run a container
+func (set *Container) Create(dryRun bool) error {
+	set.Action = Run
+
+	Info.Println("Creating " + set.Name)
+	if dryRun {
+		return nil
+	}
+	if err := set.Hooks.Run("before.create", set.Name); err != nil {
+		return err
+	}
+
+	cmd := set.GetRunArguments()
+	labels := []interface{}{
+		"--label",
+		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
+		"--label",
+		ServiceLabelName + "=" + set.Name,
+	}
+	cmd = append(labels, cmd...)
+
+	cmd = append([]interface{}{"create"}, cmd...)
+	if err := set.launchDaemonCommand(cmd); err != nil {
+		return err
+	}
+
+	return set.Hooks.Run("after.create", set.Name)
+}
+
+// Run a container
 func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	set.Action = Run
 

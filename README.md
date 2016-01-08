@@ -26,6 +26,8 @@ This means it will basically work with all versions of docker.
     - Starts stopped containers
 
     - Optionally can attach to output using `--attach|-a` flag.
+
+- `capitan create`	Create but don't run containers
     
 - `capitan start`   Start stopped containers
 
