@@ -16,17 +16,17 @@ import (
 	"unicode"
 )
 
-type SettingsParser struct {
+type ConfigParser struct {
 	Command string
 }
 
-func NewSettingsParser(cmd string) *SettingsParser {
-	return &SettingsParser{
+func NewSettingsParser(cmd string) *ConfigParser {
+	return &ConfigParser{
 		Command: cmd,
 	}
 }
 
-func (f *SettingsParser) Run() (*ProjectSettings, error) {
+func (f *ConfigParser) Run() (*ProjectConfig, error) {
 	var (
 		output   []byte
 		err      error
@@ -48,18 +48,18 @@ func (f *SettingsParser) Run() (*ProjectSettings, error) {
 		return nil, err
 	}
 	settings, err := f.parseOutput(output)
-	return &settings, err
+	return settings, err
 
 }
 
-func (f *SettingsParser) parseOutput(out []byte) (ProjectSettings, error) {
+func (f *ConfigParser) parseOutput(out []byte) (*ProjectConfig, error) {
 	lines := bytes.Split(out, []byte{'\n'})
 	settings, err := f.parseSettings(lines)
 	return settings, err
 
 }
 
-func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSettings, err error) {
+func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfig, err error) {
 	//minimum of len1 at this point in parts
 
 	cmdsMap := make(map[string]container.Container, 0)
@@ -67,6 +67,7 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 	projName, _ := os.Getwd()
 	projName = toSnake(path.Base(projName))
 	projNameArr := strings.Split(projName, "_")
+	projSettings = new(ProjectConfig)
 	projSettings.ProjectName = projNameArr[len(projNameArr)-1]
 
 	projSettings.ProjectSeparator = "_"
@@ -177,12 +178,21 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 	}
 
 	// Post process
+	err = f.postProcessConfig(cmdsMap, projSettings)
+	return
+
+}
+
+func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Container, projSettings *ProjectConfig) error {
+
 	// TODO duplicate containers for scaling
-	cmdsList := make(SettingsList, len(cmdsMap))
-	var count = 0
-	for name, item := range cmdsMap {
+	cmdsList := make(SettingsList, len(parsedConfig))
+	var count int
+
+	for name, item := range parsedConfig {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
 
+		// default image to name if 'build' is set
 		if item.Build != "" {
 			item.Image = item.Name
 		}
@@ -190,16 +200,20 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 		if len(item.Name) > logger.LongestContainerName {
 			logger.LongestContainerName = len(item.Name)
 		}
+
+		// resolve links
+		// TODO this must be disabled if scaling
 		for i, link := range item.Links {
 			link.Container = projSettings.ProjectName + projSettings.ProjectSeparator + link.Container
 			item.Links[i] = link
 		}
+
 		cmdsList[count] = item
 		count++
 	}
-	projSettings.ContainerSettingsList = cmdsList
-	return
 
+	projSettings.ContainerSettingsList = cmdsList
+	return nil
 }
 
 func stripChars(str, chr string) string {

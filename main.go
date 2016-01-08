@@ -248,7 +248,7 @@ func main() {
 	app.Run(os.Args)
 }
 
-func getSettings(settingsCmd string) (settings *ProjectSettings) {
+func getSettings(settingsCmd string) (settings *ProjectConfig) {
 	var (
 		err error
 	)

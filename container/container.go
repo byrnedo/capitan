@@ -171,9 +171,7 @@ func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) err
 
 func (set *Container) RecreateAndRun(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	if !dryRun {
-		if err := set.Rm([]string{"-f"}); err != nil {
-			return err
-		}
+		set.Rm([]string{"-f"})
 	}
 
 	if err := set.Run(attach, dryRun, wg); err != nil {
