@@ -115,6 +115,23 @@ func (settings *ProjectConfig) CapitanCreate(dryRun bool) error {
 	sort.Sort(settings.ContainerSettingsList)
 
 	for _, set := range settings.ContainerSettingsList {
+
+		if helpers.GetImageId(set.Image) == "" {
+			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
+
+			if set.Build != "" {
+				Info.Println("Building image")
+				if err := set.BuildImage(); err != nil {
+					return err
+				}
+			} else {
+				Info.Println("Pulling image")
+				if err := helpers.PullImage(set.Image); err != nil {
+					return err
+				}
+			}
+		}
+
 		if err := set.Create(dryRun); err != nil {
 			return err
 		}
@@ -140,30 +157,6 @@ func (settings *ProjectConfig) CapitanUp(attach bool, dryRun bool) error {
 			err error
 		)
 
-		//create new
-		if !helpers.ContainerExists(set.Name) {
-			if helpers.GetImageId(set.Image) == "" {
-				Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
-
-				if set.Build != "" {
-					Info.Println("Building image")
-					if err := set.BuildImage(); err != nil {
-						return err
-					}
-				} else {
-					Info.Println("Pulling image")
-					if err := helpers.PullImage(set.Image); err != nil {
-						return err
-					}
-				}
-			}
-			if err = set.Run(attach, dryRun, &wg); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// check image change or args change
 		if helpers.GetImageId(set.Image) == "" {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
@@ -179,6 +172,15 @@ func (settings *ProjectConfig) CapitanUp(attach bool, dryRun bool) error {
 				}
 			}
 		}
+
+		//create new
+		if !helpers.ContainerExists(set.Name) {
+			if err = set.Run(attach, dryRun, &wg); err != nil {
+				return err
+			}
+			continue
+		}
+
 
 		if newerImage(set.Name, set.Image) {
 			// remove and restart
