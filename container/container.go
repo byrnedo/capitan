@@ -118,7 +118,7 @@ func (set *Container) BuildImage() error {
 	if err := set.Hooks.Run("before.build", set.Name); err != nil {
 		return err
 	}
-	if _, err := helpers.RunCmd("build", "--tag", set.Name, set.Build); err != nil {
+	if _, err := helpers.RunCmd("build", "--tag", set.Image, set.Build); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.build", set.Name); err != nil {
@@ -169,6 +169,19 @@ func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) err
 
 }
 
+func (set *Container) RecreateAndRun(attach bool, dryRun bool, wg *sync.WaitGroup) error {
+	if !dryRun {
+		if err := set.Rm([]string{"-f"}); err != nil {
+			return err
+		}
+	}
+
+	if err := set.Run(attach, dryRun, wg); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Run a container
 func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	set.Action = Run
@@ -179,13 +192,6 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	}
 	if err := set.Hooks.Run("before.run", set.Name); err != nil {
 		return err
-	}
-
-	if helpers.GetImageId(set.Image) == "" {
-		Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
-		if err := helpers.PullImage(set.Image); err != nil {
-			return err
-		}
 	}
 
 	cmd := set.GetRunArguments()

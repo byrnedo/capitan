@@ -182,6 +182,10 @@ func (f *SettingsParser) parseSettings(lines [][]byte) (projSettings ProjectSett
 	var count = 0
 	for name, item := range cmdsMap {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
+
+		if item.Build != "" {
+			item.Image = item.Name
+		}
 		// Hack for logging prefix width alignment, eg 'some_container | blahbla'
 		if len(item.Name) > logger.LongestContainerName {
 			logger.LongestContainerName = len(item.Name)

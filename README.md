@@ -8,6 +8,13 @@ This means it will basically work with all versions of docker.
 ![Capitan showcase]
 (output.gif)
 
+## Capitan Features
+
+1. Shell Support - Config is read from stdout of a shell command. Extremely flexible
+2. Hooks - hooks for before and after every intrusive action
+3. Predictable run sequence - containers started in order defined
+4. Future proof - options are passed through on most commands to docker cli, very simple.
+
 ## Commands
 
 ### Invasive commands
@@ -55,28 +62,6 @@ This means it will basically work with all versions of docker.
 - `capitan build`   Build any containers with 'build' flag set (WIP)
 
 
-## Why...
-
-### ...not docker-compose?
-
-1. lack of variables
-2. options support is always behind actual docker version
-3. up restarts containers in wrong order
-4. no hooks system
-5. hassle free replacement for non x86/x86_64 architectures
-
-### ...not crowdr?
-
-Written totally in bash. I love bash but I personally feel safer with go. That is all.
-
-## Capitan Features
-
-1. Shell Support - Config is read from stdout of a shell command. Extremely flexible
-2. Hooks - hooks for before and after every intrusive action
-3. Predictable run sequence - containers started in order defined
-4. Future proof - options are passed through on most commands to docker cli, very simple.
-
- 
 ## Configuration
 
      

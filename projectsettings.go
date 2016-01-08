@@ -90,6 +90,27 @@ func (settings *ProjectSettings) LaunchCleanupWatcher() {
 	}()
 }
 
+func newerImage(container string, image string) bool {
+
+	conImage := helpers.GetContainerImageId(container)
+	localImage := helpers.GetImageId(image)
+	if conImage != "" && localImage != "" && conImage != localImage {
+		return true
+	}
+	return false
+}
+
+func haveArgsChanged(container string, runArgs []interface{}) bool {
+
+	uniqueLabel := fmt.Sprintf("%s", runArgs)
+	if helpers.GetContainerUniqueLabel(container) != uniqueLabel {
+		return true
+	}
+	return false
+	// remove and restart
+
+}
+
 // The 'up' command
 //
 // Creates a container if it doesn't exist
@@ -116,39 +137,38 @@ func (settings *ProjectSettings) CapitanUp(attach bool, dryRun bool) error {
 		}
 
 		// check image change or args change
-		if set.Image != "" {
-			conImage := helpers.GetContainerImageId(set.Name)
-			localImage := helpers.GetImageId(set.Image)
-			if conImage != "" && localImage != "" && conImage != localImage {
-				// remove and restart
-				Info.Println("Removing (different image available):", set.Name)
-				if !dryRun {
-					if err := set.Rm([]string{"-f"}); err != nil {
-						return err
-					}
-				}
 
-				if err = set.Run(attach, dryRun, &wg); err != nil {
+		if helpers.GetImageId(set.Image) == "" {
+			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
+
+			if set.Build != "" {
+				if err := set.BuildImage(); err != nil {
 					return err
 				}
-
-				continue
-			}
-			uniqueLabel := fmt.Sprintf("%s", set.GetRunArguments())
-			if helpers.GetContainerUniqueLabel(set.Name) != uniqueLabel {
-				// remove and restart
-				Info.Println("Removing (run arguments changed):", set.Name)
-				if !dryRun {
-					if err := set.Rm([]string{"-f"}); err != nil {
-						return err
-					}
-				}
-
-				if err = set.Run(attach, dryRun, &wg); err != nil {
+			} else {
+				if err := helpers.PullImage(set.Image); err != nil {
 					return err
 				}
-				continue
 			}
+		}
+
+		if newerImage(set.Name, set.Image) {
+			// remove and restart
+			Info.Println("Removing (different image available):", set.Name)
+			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if haveArgsChanged(set.Name, set.GetRunArguments()) {
+			// remove and restart
+			Info.Println("Removing (run arguments changed):", set.Name)
+			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
+				return err
+			}
+			continue
 		}
 
 		//attach if running
