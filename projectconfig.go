@@ -192,7 +192,7 @@ func (settings *ProjectConfig) CapitanUp(attach bool, dryRun bool) error {
 			continue
 		}
 
-		if haveArgsChanged(set.Name, set.GetRunArguments()) {
+		if haveArgsChanged(set.Name, set.RunArguments) {
 			// remove and restart
 			Info.Println("Removing (run arguments changed):", set.Name)
 			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {

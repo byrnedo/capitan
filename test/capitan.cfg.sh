@@ -10,6 +10,7 @@ redis image redis:latest
 redis hostname ${PREFIX}_redis
 redis hook after.run sleep 1
 redis hook after.start sleep 1
+redis scale 2
 
 #
 # General mongodb container

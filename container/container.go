@@ -88,29 +88,32 @@ func (h Hooks) Run(hookName string, containerName string) error {
 }
 
 type Container struct {
-	Name string
+	// Container name
+	Name            string
+	// name of service (not including number)
+	ServiceName     string
 	// the order defined in the config output
-	Placement int
+	Placement       int
 	// arguments to container
-	Args []string
+	ContainerArgs   []string
 	// image to use
-	Image string
+	Image           string
 	// if supplied will do docker build on this path
-	Build string
+	Build           string
 	// command for container
-	Command []string
+	Command         []string
 	// links
-	Links []Link
+	Links           []Link
 	// hooks map for this definition
-	Hooks Hooks
+	Hooks           Hooks
 	// used in commands
-	Action AppliedAction
-	// unique label of run commands
-	UniqueLabel string
+	Action          AppliedAction
 	// the total number of containers to scale to.
-	Scale int
+	Scale           int
 	// the instance number
 	ContainerNumber int
+	// the arguments for docker run / create
+	RunArguments 	[]interface{}
 }
 
 // Builds an image for a container
@@ -192,12 +195,12 @@ func (set *Container) Create(dryRun bool) error {
 		return err
 	}
 
-	cmd := set.GetRunArguments()
+	cmd := set.RunArguments
 	labels := []interface{}{
 		"--label",
 		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
 		"--label",
-		ServiceLabelName + "=" + set.Name,
+		ServiceLabelName + "=" + set.ServiceName,
 	}
 	cmd = append(labels, cmd...)
 
@@ -221,12 +224,12 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	cmd := set.GetRunArguments()
+	cmd := set.RunArguments
 	labels := []interface{}{
 		"--label",
 		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
 		"--label",
-		ServiceLabelName + "=" + set.Name,
+		ServiceLabelName + "=" + set.ServiceName,
 	}
 	cmd = append(labels, cmd...)
 
@@ -289,7 +292,7 @@ func (set *Container) GetRunArguments() []interface{} {
 		linkArgs = append(linkArgs, "--link", linkStr)
 	}
 
-	cmd := append([]interface{}{"--name", set.Name}, helpers.ToInterfaceSlice(set.Args)...)
+	cmd := append([]interface{}{"--name", set.Name}, helpers.ToInterfaceSlice(set.ContainerArgs)...)
 	cmd = append(cmd, linkArgs...)
 	cmd = append(cmd, imageName)
 	cmd = append(cmd, helpers.ToInterfaceSlice(set.Command)...)
@@ -445,3 +448,4 @@ func (set *Container) Rm(args []string) error {
 	}
 	return nil
 }
+

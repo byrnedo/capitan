@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"strings"
 	"time"
+	"fmt"
+	"bytes"
 )
 
 func ContainerExitCode(containerName string) string {
@@ -158,4 +160,33 @@ func getLabel(label string, container string) string {
 	}
 	value := strings.Trim(string(out), " \n")
 	return value
+}
+
+type Service struct {
+	ID string
+	Name string
+}
+
+func instancesOfService(service string) (svcs []*Service) {
+	ses := sh.NewSession()
+	out, err := ses.Command("docker", "ps", "-f", fmt.Sprintf("label=%s=%s", ServiceLabelName, service),  "--format", "{{.ID}} {{.Names}}").Output()
+	if err != nil {
+		return
+	}
+	if len(out) == 0 {
+		return
+	}
+
+	out = bytes.Trim(out, "\n")
+
+	svcs = make([]*Service, 0)
+	for _, line := range bytes.Split(out, []byte{'\n'}) {
+		lineParts := bytes.Split(line, []byte{' '})
+		if len(lineParts) != 2 {
+			continue
+		}
+		svcs = append(svcs, &Service{ID: string(lineParts[0]), Name: string(lineParts[1])})
+	}
+	return
+
 }

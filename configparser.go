@@ -170,8 +170,8 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 			}
 		case "global":
 		default:
-			setting.Args = append(setting.Args, "--"+action)
-			setting.Args = append(setting.Args, args)
+			setting.ContainerArgs = append(setting.ContainerArgs, "--"+action)
+			setting.ContainerArgs = append(setting.ContainerArgs, args)
 		}
 
 		cmdsMap[contr] = setting
@@ -186,8 +186,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Container, projSettings *ProjectConfig) error {
 
 	// TODO duplicate containers for scaling
-	cmdsList := make(SettingsList, len(parsedConfig))
-	var count int
+	projSettings.ContainerSettingsList =  make(SettingsList,0)
 
 	for name, item := range parsedConfig {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
@@ -195,10 +194,6 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 		// default image to name if 'build' is set
 		if item.Build != "" {
 			item.Image = item.Name
-		}
-		// Hack for logging prefix width alignment, eg 'some_container | blahbla'
-		if len(item.Name) > logger.LongestContainerName {
-			logger.LongestContainerName = len(item.Name)
 		}
 
 		// resolve links
@@ -208,12 +203,33 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 			item.Links[i] = link
 		}
 
-		cmdsList[count] = item
-		count++
+		ctrsToAdd := f.scaleContainers(&item)
+		projSettings.ContainerSettingsList = append(projSettings.ContainerSettingsList, ctrsToAdd...)
+		// at this point need to add capacity to slice and insert x number of scale containers
 	}
 
-	projSettings.ContainerSettingsList = cmdsList
 	return nil
+}
+
+func (f *ConfigParser) scaleContainers(ctr *container.Container) []container.Container {
+	numCopies := ctr.Scale
+	ctrCopies := make([]container.Container, numCopies)
+	for i:=0; i< numCopies; i++ {
+		ctrCopies[i] = *ctr
+		ctrCopies[i].ContainerNumber = i+1
+		ctrCopies[i].Name = fmt.Sprintf("%s_%d", ctr.Name, i+1)
+		ctrCopies[i].ServiceName = ctr.Name
+
+		// HACK for container logging prefix width alignment, eg 'some_container | blahbla'
+		if len(ctrCopies[i].Name) > logger.LongestContainerName {
+			logger.LongestContainerName = len(ctrCopies[i].Name)
+		}
+
+		ctrCopies[i].RunArguments = ctrCopies[i].GetRunArguments()
+	}
+
+
+	return ctrCopies
 }
 
 func stripChars(str, chr string) string {
