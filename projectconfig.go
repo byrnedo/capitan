@@ -34,6 +34,9 @@ func (s SettingsList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 func (s SettingsList) Less(i, j int) bool {
+	if s[i].Placement == s[j].Placement {
+		return sort.StringsAreSorted([]string{s[i].Name, s[j].Name})
+	}
 	return s[i].Placement < s[j].Placement
 }
 

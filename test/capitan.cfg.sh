@@ -30,6 +30,6 @@ nats hostname ${PREFIX}_nats
 #
 app build ./
 app hostname ${PREFIX}_app
-app scale 1
+app scale 3
 
 EOF
