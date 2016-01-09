@@ -186,7 +186,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Container, projSettings *ProjectConfig) error {
 
 	// TODO duplicate containers for scaling
-	projSettings.ContainerSettingsList =  make(SettingsList,0)
+	projSettings.ContainerList = make(SettingsList, 0)
 
 	for name, item := range parsedConfig {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
@@ -203,20 +203,41 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 			item.Links[i] = link
 		}
 
+
+		toClean := f.createCleanupTasks(&item)
+		projSettings.ContainerCleanupList = append(projSettings.ContainerCleanupList, toClean...)
+
+
 		ctrsToAdd := f.scaleContainers(&item)
-		projSettings.ContainerSettingsList = append(projSettings.ContainerSettingsList, ctrsToAdd...)
+		projSettings.ContainerList = append(projSettings.ContainerList, ctrsToAdd...)
 		// at this point need to add capacity to slice and insert x number of scale containers
 	}
 
 	return nil
 }
 
-func (f *ConfigParser) scaleContainers(ctr *container.Container) []container.Container {
+func (f *ConfigParser) createCleanupTasks(ctr *container.Container) (tasks SettingsList) {
+	svcs := helpers.InstancesOfService(ctr.Name)
+	for _, existing := range svcs {
+		instNum, err := helpers.GetNumericSuffix(existing.Name)
+		if err != nil || instNum < 0 || instNum > ctr.Scale {
+			tempCtr := new(container.Container)
+			*tempCtr = *ctr
+			tempCtr.Name = existing.Name
+			tasks = append(tasks, tempCtr)
+		}
+	}
+	return
+}
+
+func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Container {
 	numCopies := ctr.Scale
-	ctrCopies := make([]container.Container, numCopies)
-	for i:=0; i< numCopies; i++ {
-		ctrCopies[i] = *ctr
-		ctrCopies[i].ContainerNumber = i+1
+	ctrCopies := make([]*container.Container, numCopies)
+
+	for i := 0; i < numCopies; i++ {
+		ctrCopies[i] = new(container.Container)
+		*ctrCopies[i] = *ctr
+		ctrCopies[i].ContainerNumber = i + 1
 		ctrCopies[i].Name = fmt.Sprintf("%s_%d", ctr.Name, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
 
@@ -227,7 +248,6 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container) []container.Con
 
 		ctrCopies[i].RunArguments = ctrCopies[i].GetRunArguments()
 	}
-
 
 	return ctrCopies
 }

@@ -8,9 +8,9 @@ global project capitan
 #
 redis image redis:latest
 redis hostname ${PREFIX}_redis
-redis hook after.run sleep 1
-redis hook after.start sleep 1
-redis scale 2
+#redis hook after.run sleep 1
+#redis hook after.start sleep 1
+redis scale 1
 
 #
 # General mongodb container
@@ -30,5 +30,6 @@ nats hostname ${PREFIX}_nats
 #
 app build ./
 app hostname ${PREFIX}_app
+app scale 1
 
 EOF

@@ -1,7 +1,9 @@
 package helpers
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	. "github.com/byrnedo/capitan/consts"
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
@@ -9,8 +11,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"time"
-	"fmt"
-	"bytes"
 )
 
 func ContainerExitCode(containerName string) string {
@@ -163,13 +163,13 @@ func getLabel(label string, container string) string {
 }
 
 type Service struct {
-	ID string
+	ID   string
 	Name string
 }
 
-func instancesOfService(service string) (svcs []*Service) {
+func InstancesOfService(service string) (svcs []*Service) {
 	ses := sh.NewSession()
-	out, err := ses.Command("docker", "ps", "-f", fmt.Sprintf("label=%s=%s", ServiceLabelName, service),  "--format", "{{.ID}} {{.Names}}").Output()
+	out, err := ses.Command("docker", "ps", "-f", fmt.Sprintf("label=%s=%s", ServiceLabelName, service), "--format", "{{.ID}} {{.Names}}").Output()
 	if err != nil {
 		return
 	}

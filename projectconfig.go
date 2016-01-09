@@ -17,13 +17,15 @@ var (
 	allDone = make(chan bool, 1)
 )
 
+
 type ProjectConfig struct {
-	ProjectName           string
-	ProjectSeparator      string
-	ContainerSettingsList SettingsList
+	ProjectName          string
+	ProjectSeparator     string
+	ContainerList        SettingsList
+	ContainerCleanupList SettingsList
 }
 
-type SettingsList []container.Container
+type SettingsList []*container.Container
 
 func (s SettingsList) Len() int {
 	return len(s)
@@ -35,7 +37,7 @@ func (s SettingsList) Less(i, j int) bool {
 	return s[i].Placement < s[j].Placement
 }
 
-func (settings *ProjectConfig) LaunchCleanupWatcher() {
+func (settings *ProjectConfig) LaunchSignalWatcher() {
 
 	var (
 		killBegan     = make(chan bool, 1)
@@ -74,12 +76,12 @@ func (settings *ProjectConfig) LaunchCleanupWatcher() {
 				calls++
 				if calls == 1 {
 					go func() {
-						settings.CapitanStop(nil, false)
+						settings.ContainerList.CapitanStop(nil, false)
 						stopDone <- true
 					}()
 				} else if calls == 2 {
 					killBegan <- true
-					settings.CapitanKill(nil, false)
+					settings.ContainerList.CapitanKill(nil, false)
 					killDone <- true
 				}
 			default:
@@ -111,10 +113,10 @@ func haveArgsChanged(container string, runArgs []interface{}) bool {
 
 }
 
-func (settings *ProjectConfig) CapitanCreate(dryRun bool) error {
-	sort.Sort(settings.ContainerSettingsList)
+func (settings SettingsList) CapitanCreate(dryRun bool) error {
+	sort.Sort(settings)
 
-	for _, set := range settings.ContainerSettingsList {
+	for _, set := range settings {
 
 		if helpers.GetImageId(set.Image) == "" {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
@@ -147,12 +149,12 @@ func (settings *ProjectConfig) CapitanCreate(dryRun bool) error {
 // Recreates a container if the container's image has a newer id locally
 // OR if the command used to create the container is now changed (i.e.
 // config has changed.
-func (settings *ProjectConfig) CapitanUp(attach bool, dryRun bool) error {
-	sort.Sort(settings.ContainerSettingsList)
+func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
+	sort.Sort(settings)
 
 	wg := sync.WaitGroup{}
 
-	for _, set := range settings.ContainerSettingsList {
+	for _, set := range settings {
 		var (
 			err error
 		)
@@ -180,7 +182,6 @@ func (settings *ProjectConfig) CapitanUp(attach bool, dryRun bool) error {
 			}
 			continue
 		}
-
 
 		if newerImage(set.Name, set.Image) {
 			// remove and restart
@@ -234,10 +235,10 @@ func (settings *ProjectConfig) CapitanUp(attach bool, dryRun bool) error {
 }
 
 // Starts stopped containers
-func (settings *ProjectConfig) CapitanStart(attach bool, dryRun bool) error {
-	sort.Sort(settings.ContainerSettingsList)
+func (settings SettingsList) CapitanStart(attach bool, dryRun bool) error {
+	sort.Sort(settings)
 	wg := sync.WaitGroup{}
-	for _, set := range settings.ContainerSettingsList {
+	for _, set := range settings {
 		if helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already running " + set.Name)
 			if attach {
@@ -263,9 +264,9 @@ func (settings *ProjectConfig) CapitanStart(attach bool, dryRun bool) error {
 }
 
 // Command to restart all containers
-func (settings *ProjectConfig) CapitanRestart(args []string, dryRun bool) error {
-	sort.Sort(settings.ContainerSettingsList)
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanRestart(args []string, dryRun bool) error {
+	sort.Sort(settings)
+	for _, set := range settings {
 		Info.Println("Restarting " + set.Name)
 		if !dryRun {
 			if err := set.Restart(args); err != nil {
@@ -277,9 +278,9 @@ func (settings *ProjectConfig) CapitanRestart(args []string, dryRun bool) error 
 }
 
 // Print all container IPs
-func (settings *ProjectConfig) CapitanIP() error {
-	sort.Sort(settings.ContainerSettingsList)
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanIP() error {
+	sort.Sort(settings)
+	for _, set := range settings {
 		ip := set.IP()
 		Info.Printf("%s: %s", set.Name, ip)
 	}
@@ -287,10 +288,10 @@ func (settings *ProjectConfig) CapitanIP() error {
 }
 
 // Stream all container logs
-func (settings *ProjectConfig) CapitanLogs() error {
-	sort.Sort(settings.ContainerSettingsList)
+func (settings SettingsList) CapitanLogs() error {
+	sort.Sort(settings)
 	var wg sync.WaitGroup
-	for _, set := range settings.ContainerSettingsList {
+	for _, set := range settings {
 		var (
 			ses *sh.Session
 			err error
@@ -313,15 +314,15 @@ func (settings *ProjectConfig) CapitanLogs() error {
 }
 
 // Stream all container stats
-func (settings *ProjectConfig) CapitanStats() error {
+func (settings SettingsList) CapitanStats() error {
 	var (
 		args []interface{}
 	)
-	sort.Sort(settings.ContainerSettingsList)
+	sort.Sort(settings)
 
-	args = make([]interface{}, len(settings.ContainerSettingsList))
+	args = make([]interface{}, len(settings))
 
-	for i, set := range settings.ContainerSettingsList {
+	for i, set := range settings {
 		args[i] = set.Name
 	}
 
@@ -333,10 +334,10 @@ func (settings *ProjectConfig) CapitanStats() error {
 }
 
 // Print `docker ps` ouptut for all containers in project
-func (settings *ProjectConfig) CapitanPs(args []string) error {
-	sort.Sort(settings.ContainerSettingsList)
+func (settings SettingsList) CapitanPs(args []string) error {
+	sort.Sort(settings)
 	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
-	for _, set := range settings.ContainerSettingsList {
+	for _, set := range settings {
 		allArgs = append(allArgs, "-f", "name="+set.Name)
 	}
 	var (
@@ -351,9 +352,9 @@ func (settings *ProjectConfig) CapitanPs(args []string) error {
 }
 
 // Kill all running containers in project
-func (settings *ProjectConfig) CapitanKill(args []string, dryRun bool) error {
-	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
+	sort.Sort(sort.Reverse(settings))
+	for _, set := range settings {
 		if !helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already dead:", set.Name)
 			continue
@@ -369,9 +370,9 @@ func (settings *ProjectConfig) CapitanKill(args []string, dryRun bool) error {
 }
 
 // Stops the containers in the project
-func (settings *ProjectConfig) CapitanStop(args []string, dryRun bool) error {
-	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanStop(args []string, dryRun bool) error {
+	sort.Sort(sort.Reverse(settings))
+	for _, set := range settings {
 		if !helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already dead:", set.Name)
 			continue
@@ -387,9 +388,9 @@ func (settings *ProjectConfig) CapitanStop(args []string, dryRun bool) error {
 }
 
 // Remove all containers in project
-func (settings *ProjectConfig) CapitanRm(args []string, dryRun bool) error {
-	sort.Sort(sort.Reverse(settings.ContainerSettingsList))
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanRm(args []string, dryRun bool) error {
+	sort.Sort(sort.Reverse(settings))
+	for _, set := range settings {
 
 		if !dryRun && helpers.ContainerExists(set.Name) {
 			Info.Println("Removing " + set.Name)
@@ -404,9 +405,9 @@ func (settings *ProjectConfig) CapitanRm(args []string, dryRun bool) error {
 }
 
 // The build command
-func (settings *ProjectConfig) CapitanBuild(dryRun bool) error {
-	sort.Sort(settings.ContainerSettingsList)
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanBuild(dryRun bool) error {
+	sort.Sort(settings)
+	for _, set := range settings {
 		if len(set.Build) == 0 {
 			continue
 		}
@@ -422,9 +423,9 @@ func (settings *ProjectConfig) CapitanBuild(dryRun bool) error {
 }
 
 // The build command
-func (settings *ProjectConfig) CapitanPull(dryRun bool) error {
-	sort.Sort(settings.ContainerSettingsList)
-	for _, set := range settings.ContainerSettingsList {
+func (settings SettingsList) CapitanPull(dryRun bool) error {
+	sort.Sort(settings)
+	for _, set := range settings {
 		if len(set.Build) > 0 || set.Image == "" {
 			continue
 		}
