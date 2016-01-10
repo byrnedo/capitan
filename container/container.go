@@ -92,6 +92,8 @@ type Container struct {
 	Name string
 	// name of service (not including number)
 	ServiceName string
+	// non unique service id, eg the first col in config, "mongo" or "php"
+	ServiceType string
 	// the order defined in the config output
 	Placement int
 	// arguments to container
@@ -114,7 +116,8 @@ type Container struct {
 	RunArguments []interface{}
 	// the project name
 	ProjectName string
-
+	// the project name separator, usually "_"
+	ProjectNameSeparator string
 }
 
 // Builds an image for a container

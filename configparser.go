@@ -7,6 +7,7 @@ import (
 	"github.com/byrnedo/capitan/container"
 	"github.com/byrnedo/capitan/helpers"
 	"github.com/byrnedo/capitan/logger"
+	"github.com/codegangsta/cli"
 	"github.com/codeskyblue/go-sh"
 	"github.com/mgutz/str"
 	"os"
@@ -17,12 +18,16 @@ import (
 )
 
 type ConfigParser struct {
+	// command to obtain config from
 	Command string
+	// args given to cli
+	Args    cli.Args
 }
 
-func NewSettingsParser(cmd string) *ConfigParser {
+func NewSettingsParser(cmd string, args cli.Args) *ConfigParser {
 	return &ConfigParser{
 		Command: cmd,
+		Args:    args,
 	}
 }
 
@@ -190,7 +195,9 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 
 	for name, item := range parsedConfig {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
+		item.ServiceType = name
 		item.ProjectName = projSettings.ProjectName
+		item.ProjectNameSeparator = projSettings.ProjectSeparator
 
 		// default image to name if 'build' is set
 		if item.Build != "" {
@@ -204,10 +211,10 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 			item.Links[i] = link
 		}
 
+		f.parseScaleArg(&item)
 
 		toClean := f.createCleanupTasks(&item)
 		projSettings.ContainerCleanupList = append(projSettings.ContainerCleanupList, toClean...)
-
 
 		ctrsToAdd := f.scaleContainers(&item)
 		projSettings.ContainerList = append(projSettings.ContainerList, ctrsToAdd...)
@@ -217,10 +224,22 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 	return nil
 }
 
+func (f *ConfigParser) parseScaleArg(ctr *container.Container) {
+	if f.Args.Get(0) == "scale" {
+		if f.Args.Get(1) == ctr.ServiceType {
+			if scaleArg, err := strconv.Atoi(f.Args.Get(2)); err == nil {
+				if scaleArg > 0 {
+					ctr.Scale = scaleArg
+				}
+			}
+		}
+	}
+}
+
 func (f *ConfigParser) createCleanupTasks(ctr *container.Container) (tasks SettingsList) {
 	svcs := helpers.InstancesOfService(ctr.Name)
 	for _, existing := range svcs {
-		instNum, err := helpers.GetNumericSuffix(existing.Name)
+		instNum, err := helpers.GetNumericSuffix(existing.Name, ctr.ProjectNameSeparator)
 		if err != nil || instNum < 0 || instNum > ctr.Scale {
 			tempCtr := new(container.Container)
 			*tempCtr = *ctr
@@ -231,14 +250,15 @@ func (f *ConfigParser) createCleanupTasks(ctr *container.Container) (tasks Setti
 	return
 }
 
-func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Container {
-	numCopies := ctr.Scale
-	ctrCopies := make([]*container.Container, numCopies)
 
-	for i := 0; i < numCopies; i++ {
+func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Container {
+
+	ctrCopies := make([]*container.Container, ctr.Scale)
+
+	for i := 0; i < ctr.Scale; i++ {
 		ctrCopies[i] = new(container.Container)
 		*ctrCopies[i] = *ctr
-		ctrCopies[i].Name = fmt.Sprintf("%s_%d", ctr.Name, i+1)
+		ctrCopies[i].Name = fmt.Sprintf("%s%s%d", ctr.Name, ctr.ProjectNameSeparator, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
 
 		// HACK for container logging prefix width alignment, eg 'some_container | blahbla'

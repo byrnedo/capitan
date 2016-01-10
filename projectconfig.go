@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/byrnedo/capitan/consts"
 	"github.com/byrnedo/capitan/container"
 	"github.com/byrnedo/capitan/helpers"
 	. "github.com/byrnedo/capitan/logger"
@@ -11,13 +12,11 @@ import (
 	"sort"
 	"sync"
 	"syscall"
-	"github.com/byrnedo/capitan/consts"
 )
 
 var (
 	allDone = make(chan bool, 1)
 )
-
 
 type ProjectConfig struct {
 	ProjectName          string
@@ -36,8 +35,8 @@ func (s SettingsList) Swap(i, j int) {
 }
 func (s SettingsList) Less(i, j int) bool {
 	if s[i].Placement == s[j].Placement {
-		iSuf, iErr := helpers.GetNumericSuffix(s[i].Name)
-		jSuf, jErr := helpers.GetNumericSuffix(s[j].Name)
+		iSuf, iErr := helpers.GetNumericSuffix(s[i].Name, s[i].ProjectNameSeparator)
+		jSuf, jErr := helpers.GetNumericSuffix(s[j].Name, s[i].ProjectNameSeparator)
 		if iErr == nil && jErr == nil {
 			return iSuf < jSuf
 		} else {
@@ -45,6 +44,16 @@ func (s SettingsList) Less(i, j int) bool {
 		}
 	}
 	return s[i].Placement < s[j].Placement
+}
+
+func (s SettingsList) Filter(cb func(*container.Container) bool) (filtered SettingsList) {
+	filtered = make(SettingsList, 0)
+	for _, item := range s {
+		if cb(item) {
+			filtered = append(filtered, item)
+		}
+	}
+	return
 }
 
 func (settings *ProjectConfig) LaunchSignalWatcher() {

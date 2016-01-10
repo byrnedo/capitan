@@ -4,6 +4,15 @@ import (
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codegangsta/cli"
 	"os"
+"github.com/byrnedo/capitan/container"
+)
+
+var (
+	command    string
+	args       []string
+	verboseLog bool
+	dryRun     bool
+	attach     bool
 )
 
 func main() {
@@ -11,13 +20,6 @@ func main() {
 	app.Name = "capitan"
 	app.Usage = "Deploy and orchestrate docker containers"
 	app.Version = "0.1"
-
-	var (
-		command    string
-		verboseLog bool
-		dryRun     bool
-		attach     bool
-	)
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -46,6 +48,8 @@ func main() {
 		if dryRun {
 			Info.Printf("Previewing changes...\n\n")
 		}
+
+		args = c.Args()
 		return nil
 	}
 
@@ -60,9 +64,9 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Create then run or update containers",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				settings.LaunchSignalWatcher()
-				if err := settings.ContainerCleanupList.CapitanStop(nil,dryRun); err != nil {
+				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanUp(attach, dryRun); err != nil {
@@ -84,8 +88,8 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Create containers, but don't run them",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
-				if err := settings.ContainerCleanupList.CapitanStop(nil,dryRun); err != nil {
+				settings := getSettings()
+				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanCreate(dryRun); err != nil {
@@ -100,9 +104,9 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Start stopped containers",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				settings.LaunchSignalWatcher()
-				if err := settings.ContainerCleanupList.CapitanStop(nil,dryRun); err != nil {
+				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanStart(attach, dryRun); err != nil {
@@ -119,13 +123,33 @@ func main() {
 			},
 		},
 		{
+			Name:            "scale",
+			Aliases:         []string{},
+			Usage:           "Number of instances to run of container",
+			SkipFlagParsing: true,
+			Action: func(c *cli.Context) {
+				settings := getSettings()
+				if err := settings.ContainerCleanupList.Filter(func(i *container.Container)bool {
+					return i.ServiceType == c.Args().Get(0)
+				}).CapitanStop(nil, dryRun); err != nil {
+					Warning.Println("Failed to scale down containers:", err)
+				}
+				if err := settings.ContainerList.Filter(func(i *container.Container)bool{
+					return i.ServiceType == c.Args().Get(0)
+				}).CapitanUp(false, dryRun); err != nil {
+					Error.Println("Scale failed:", err)
+					os.Exit(1)
+				}
+			},
+		},
+		{
 			Name:            "restart",
 			Aliases:         []string{},
 			Usage:           "Restart containers",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
-				if err := settings.ContainerCleanupList.CapitanStop(nil,dryRun); err != nil {
+				settings := getSettings()
+				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanRestart(c.Args(), dryRun); err != nil {
@@ -140,7 +164,7 @@ func main() {
 			Usage:           "Stop running containers",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanStop(c.Args(), dryRun); err != nil {
 					Error.Println("Stop failed:", err)
@@ -154,7 +178,7 @@ func main() {
 			Usage:           "Kill running containers using SIGKILL or a specified signal",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanKill(c.Args(), dryRun); err != nil {
 					Error.Println("Kill failed:", err)
@@ -168,7 +192,7 @@ func main() {
 			Usage:           "Remove stopped containers",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanRm(c.Args(), dryRun); err != nil {
 					Error.Println("Rm failed:", err)
@@ -182,7 +206,7 @@ func main() {
 			Usage:           "Show container status",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				if err := settings.CapitanPs(c.Args()); err != nil {
 					Error.Println("Ps failed:", err)
 					os.Exit(1)
@@ -196,7 +220,7 @@ func main() {
 			Usage:           "Show container ip addresses",
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				if err := settings.ContainerList.CapitanIP(); err != nil {
 					Error.Println("IP failed:", err)
 					os.Exit(1)
@@ -209,7 +233,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Build any containers with 'build' flag set",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				if err := settings.ContainerList.CapitanBuild(dryRun); err != nil {
 					Error.Println("Build failed:", err)
 					os.Exit(1)
@@ -222,7 +246,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Pull all images defined in project",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				if err := settings.ContainerList.CapitanPull(dryRun); err != nil {
 					Error.Println("Pull failed:", err)
 					os.Exit(1)
@@ -235,7 +259,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "stream container logs",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanLogs(); err != nil {
 					Error.Println("Logs failed:", err)
@@ -249,7 +273,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "stream stats for all containers in project",
 			Action: func(c *cli.Context) {
-				settings := getSettings(command)
+				settings := getSettings()
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanStats(); err != nil {
 					Error.Println("Stats failed:", err)
@@ -262,11 +286,11 @@ func main() {
 	app.Run(os.Args)
 }
 
-func getSettings(settingsCmd string) (settings *ProjectConfig) {
+func getSettings() (settings *ProjectConfig) {
 	var (
 		err error
 	)
-	runner := NewSettingsParser(settingsCmd)
+	runner := NewSettingsParser(command, args)
 	if settings, err = runner.Run(); err != nil {
 		Error.Printf("Error running command: %s\n", err)
 		os.Exit(1)
