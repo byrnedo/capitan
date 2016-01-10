@@ -24,12 +24,13 @@ mongo hostname ${PREFIX}_mongo
 #
 nats image nats:latest
 nats hostname ${PREFIX}_nats
+nats scale 1
 
 #
 # Dummy
 #
 app build ./
 app hostname ${PREFIX}_app
-app scale 3
+app scale 1
 
 EOF

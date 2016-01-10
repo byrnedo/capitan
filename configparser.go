@@ -190,6 +190,7 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 
 	for name, item := range parsedConfig {
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
+		item.ProjectName = projSettings.ProjectName
 
 		// default image to name if 'build' is set
 		if item.Build != "" {
@@ -237,7 +238,6 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Co
 	for i := 0; i < numCopies; i++ {
 		ctrCopies[i] = new(container.Container)
 		*ctrCopies[i] = *ctr
-		ctrCopies[i].ContainerNumber = i + 1
 		ctrCopies[i].Name = fmt.Sprintf("%s_%d", ctr.Name, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
 

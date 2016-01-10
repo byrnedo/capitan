@@ -110,10 +110,11 @@ type Container struct {
 	Action AppliedAction
 	// the total number of containers to scale to.
 	Scale int
-	// the instance number
-	ContainerNumber int
 	// the arguments for docker run / create
 	RunArguments []interface{}
+	// the project name
+	ProjectName string
+
 }
 
 // Builds an image for a container
@@ -201,6 +202,8 @@ func (set *Container) Create(dryRun bool) error {
 		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
 		"--label",
 		ServiceLabelName + "=" + set.ServiceName,
+		"--label",
+		ProjectLabelName + "=" + set.ProjectName,
 	}
 	cmd = append(labels, cmd...)
 
@@ -230,6 +233,8 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
 		"--label",
 		ServiceLabelName + "=" + set.ServiceName,
+		"--label",
+		ProjectLabelName + "=" + set.ProjectName,
 	}
 	cmd = append(labels, cmd...)
 
@@ -387,6 +392,10 @@ func (set *Container) IP() string {
 func (set *Container) Logs() (*sh.Session, error) {
 	color := nextColor()
 	ses := sh.NewSession()
+
+	if logger.GetLevel() == DebugLevel {
+		ses.ShowCMD = true
+	}
 	ses.Command("docker", "logs", "--tail", "10", "-f", set.Name)
 
 	ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)

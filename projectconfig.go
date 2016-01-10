@@ -11,6 +11,7 @@ import (
 	"sort"
 	"sync"
 	"syscall"
+	"github.com/byrnedo/capitan/consts"
 )
 
 var (
@@ -35,7 +36,13 @@ func (s SettingsList) Swap(i, j int) {
 }
 func (s SettingsList) Less(i, j int) bool {
 	if s[i].Placement == s[j].Placement {
-		return sort.StringsAreSorted([]string{s[i].Name, s[j].Name})
+		iSuf, iErr := helpers.GetNumericSuffix(s[i].Name)
+		jSuf, jErr := helpers.GetNumericSuffix(s[j].Name)
+		if iErr == nil && jErr == nil {
+			return iSuf < jSuf
+		} else {
+			return sort.StringsAreSorted([]string{s[i].Name, s[j].Name})
+		}
 	}
 	return s[i].Placement < s[j].Placement
 }
@@ -113,6 +120,23 @@ func haveArgsChanged(container string, runArgs []interface{}) bool {
 	}
 	return false
 	// remove and restart
+
+}
+
+func (settings *ProjectConfig) CapitanPs(args []string) error {
+
+	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
+	allArgs = append(allArgs, "-f", fmt.Sprintf("label=%s=%s", consts.ProjectLabelName, settings.ProjectName))
+
+	var (
+		err error
+		out []byte
+	)
+	if out, err = helpers.RunCmd(allArgs...); err != nil {
+		return err
+	}
+	Info.Print(string(out))
+	return nil
 
 }
 
@@ -336,30 +360,12 @@ func (settings SettingsList) CapitanStats() error {
 	return nil
 }
 
-// Print `docker ps` ouptut for all containers in project
-func (settings SettingsList) CapitanPs(args []string) error {
-	sort.Sort(settings)
-	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
-	for _, set := range settings {
-		allArgs = append(allArgs, "-f", "name="+set.Name)
-	}
-	var (
-		err error
-		out []byte
-	)
-	if out, err = helpers.RunCmd(allArgs...); err != nil {
-		return err
-	}
-	Info.Print(string(out))
-	return nil
-}
-
 // Kill all running containers in project
 func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
 		if !helpers.ContainerIsRunning(set.Name) {
-			Info.Println("Already dead:", set.Name)
+			Info.Println("Already stopped", set.Name)
 			continue
 		}
 		Info.Println("Killing " + set.Name)
@@ -377,7 +383,7 @@ func (settings SettingsList) CapitanStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
 		if !helpers.ContainerIsRunning(set.Name) {
-			Info.Println("Already dead:", set.Name)
+			Info.Println("Already stopped", set.Name)
 			continue
 		}
 		Info.Println("Stopping " + set.Name)
@@ -395,8 +401,11 @@ func (settings SettingsList) CapitanRm(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
 
-		if !dryRun && helpers.ContainerExists(set.Name) {
+		if helpers.ContainerExists(set.Name) {
 			Info.Println("Removing " + set.Name)
+			if dryRun {
+				continue
+			}
 			if err := set.Rm(args); err != nil {
 				return err
 			}

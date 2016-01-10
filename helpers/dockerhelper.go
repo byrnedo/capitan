@@ -169,7 +169,7 @@ type Service struct {
 
 func InstancesOfService(service string) (svcs []*Service) {
 	ses := sh.NewSession()
-	out, err := ses.Command("docker", "ps", "-f", fmt.Sprintf("label=%s=%s", ServiceLabelName, service), "--format", "{{.ID}} {{.Names}}").Output()
+	out, err := ses.Command("docker", "ps", "-af", fmt.Sprintf("label=%s=%s", ServiceLabelName, service), "--format", "{{.ID}} {{.Names}}").Output()
 	if err != nil {
 		return
 	}
