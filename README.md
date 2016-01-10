@@ -21,40 +21,62 @@ This means it will basically work with all versions of docker.
 
 #### `capitan up`
 Create then run or update containers 
-    - Recreates if:
-        1. If newer image is found it will remove the old container and run a new one
-        2. Container config has changed
-    - Starts stopped containers
+Recreates if:
+    1. If newer image is found it will remove the old container and run a new one
+    2. Container config has changed
+Starts stopped containers
 
-    - Optionally can attach to output using `--attach|-a` flag.
+    capitan up
+    # Optionally can attach to output using `--attach|-a` flag.
+    capitan up -a
 
 #### `capitan create`
 Create but don't run containers
+
+    capitan create
     
 #### `capitan start`
 Start stopped containers
 
-    - Optionally can attach to output using `--attach|-a` flag.
+    capitan start
+    # Optionally can attach to output using `--attach|-a` flag.
+    capitan start -a
+    
+#### `capitan scale`
+Start or stop instances of a container until required amount are running
+
+    # run 5 instances of mysql
+    capitan scale mysql 5
+    
+NOTE: for containers started via this command to be accepted by further commands, the config output must be altered to state the required instances
 
 ##### `capitan restart`	
 Restart containers
     
-    - Further arguments passed through to docker, example `capitan start -t 5`
+    capitan restart
+    # Further arguments passed through to docker, example `capitan start -t 5`
+    capitan restart -t 10
 
 ##### `capitan stop`	
 Stop running containers
     
-    - Further arguments passed through to docker, example `capitan stop -t 5`
+    capitan stop
+    # Further arguments passed through to docker, example `capitan stop -t 5`
+    capitan stop -t 10
     
 ##### `capitan kill`	
 Kill running containers using SIGKILL or a specified signal
     
-    - Further arguments passed through to docker, example `capitan kill --signal KILL`
+    capitan kill
+    # Further arguments passed through to docker, example `capitan kill --signal KILL`
+    capitan kill --signal KILL
 
 ##### `capitan rm`		
 Remove stopped containers
     
-    - Further arguments passed through to docker, example `capitan rm -f`
+    capitan rm
+    # Further arguments passed through to docker, example `capitan rm -f`
+    capitan rm -fv
     
 ### Non invasive commands
     
