@@ -19,7 +19,8 @@ This means it will basically work with all versions of docker.
 
 ### Invasive commands
 
-- `capitan up`		Create then run or update containers 
+#### `capitan up`
+Create then run or update containers 
     - Recreates if:
         1. If newer image is found it will remove the old container and run a new one
         2. Container config has changed
@@ -27,41 +28,52 @@ This means it will basically work with all versions of docker.
 
     - Optionally can attach to output using `--attach|-a` flag.
 
-- `capitan create`	Create but don't run containers
+#### `capitan create`
+Create but don't run containers
     
-- `capitan start`   Start stopped containers
+#### `capitan start`
+Start stopped containers
 
     - Optionally can attach to output using `--attach|-a` flag.
 
-- `capitan restart`	Restart containers
+##### `capitan restart`	
+Restart containers
     
     - Further arguments passed through to docker, example `capitan start -t 5`
 
-- `capitan stop`	Stop running containers
+##### `capitan stop`	
+Stop running containers
     
     - Further arguments passed through to docker, example `capitan stop -t 5`
     
-- `capitan kill`	Kill running containers using SIGKILL or a specified signal
+##### `capitan kill`	
+Kill running containers using SIGKILL or a specified signal
     
     - Further arguments passed through to docker, example `capitan kill --signal KILL`
 
-- `capitan rm`		Remove stopped containers
+##### `capitan rm`		
+Remove stopped containers
     
     - Further arguments passed through to docker, example `capitan rm -f`
     
 ### Non invasive commands
     
-- `capitan ps`		Show container status
+##### `capitan ps`
+Show container status
     
     - Further arguments passed through to docker, example `capitan ps -a`
 
-- `capitan ip`		Show container ip addresses
+##### `capitan ip`
+Show container ip addresses
 
-- `capitan logs`    Follow container logs
+##### `capitan logs`
+Follow container logs
 
-- `capitan pull`    Pull images for all containers
+##### `capitan pull`
+Pull images for all containers
 
-- `capitan build`   Build any containers with 'build' flag set (WIP)
+##### `capitan build`
+Build any containers with 'build' flag set (WIP)
 
 
 ## Configuration
@@ -106,6 +118,11 @@ Allows for a custom shell command to be evaluated at the following points:
     - This will occur in the `up` and `rm` command
        
 *NOTE* hooks do not conform exactly to each command. Example: an `up` command may `rm` and then `run` a container OR just `start` a stopped container.
+
+#### `scale`
+Number of instances of the container to run. Default is 1.
+
+NOTE: this is untested with links ( I don't use links )
     
 
 ####`global project`
@@ -115,7 +132,7 @@ The project name, defaults to current working directory
 String to use to create container name from `project` and name specified in config
 
 
-### Example Config :
+### Example Config
     
     #!/bin/bash
     PREFIX=dev
@@ -150,7 +167,6 @@ String to use to create container name from `project` and name specified in conf
 ## Roadmap
 
 1. Tests
-2. Scaling (multiple instances of same container)
-3. More efficient `up` logic
-4. Helpful aliases in shell env.
-5. More flexible `build` command
+2. More efficient `up` logic
+3. Helpful aliases in shell env.
+4. More flexible `build` command
