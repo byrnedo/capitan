@@ -10,6 +10,7 @@ import (
 	"github.com/codeskyblue/go-sh"
 	"io/ioutil"
 	"strings"
+	"path/filepath"
 	"time"
 )
 
@@ -185,7 +186,7 @@ func InstancesOfService(service string) (svcs []*Service) {
 		if len(lineParts) != 2 {
 			continue
 		}
-		svcs = append(svcs, &Service{ID: string(lineParts[0]), Name: string(lineParts[1])})
+		svcs = append(svcs, &Service{ID: string(lineParts[0]), Name: filepath.Base(string(lineParts[1]))})
 	}
 	return
 
