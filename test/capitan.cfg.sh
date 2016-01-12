@@ -33,8 +33,7 @@ app build ./
 app hostname ${PREFIX}_app
 app scale 3
 app link mongo:mgo
-app link something:sth
 app volumes-from nats
-app volumes-from something
+app volumes-from capitan_nats_1
 
 EOF
