@@ -207,7 +207,7 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 			item.Image = item.Name
 		}
 
-		f.parseScaleArg(&item)
+		f.processScaleArg(&item)
 
 		toClean := f.createCleanupTasks(&item)
 		projSettings.ContainerCleanupList = append(projSettings.ContainerCleanupList, toClean...)
@@ -250,7 +250,7 @@ func (f *ConfigParser) processLinks(parsedConfig map[string]container.Container,
 	}
 }
 
-func (f *ConfigParser) parseScaleArg(ctr *container.Container) {
+func (f *ConfigParser) processScaleArg(ctr *container.Container) {
 	if f.Args.Get(0) == "scale" {
 		if f.Args.Get(1) == ctr.ServiceType {
 			if scaleArg, err := strconv.Atoi(f.Args.Get(2)); err == nil {
