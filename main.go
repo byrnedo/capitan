@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/byrnedo/capitan/container"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codegangsta/cli"
 	"os"
-"github.com/byrnedo/capitan/container"
 )
 
 var (
@@ -129,12 +129,12 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
-				if err := settings.ContainerCleanupList.Filter(func(i *container.Container)bool {
+				if err := settings.ContainerCleanupList.Filter(func(i *container.Container) bool {
 					return i.ServiceType == c.Args().Get(0)
 				}).CapitanStop(nil, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
-				if err := settings.ContainerList.Filter(func(i *container.Container)bool{
+				if err := settings.ContainerList.Filter(func(i *container.Container) bool {
 					return i.ServiceType == c.Args().Get(0)
 				}).CapitanUp(false, dryRun); err != nil {
 					Error.Println("Scale failed:", err)

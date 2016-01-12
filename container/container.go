@@ -106,6 +106,8 @@ type Container struct {
 	Command []string
 	// links
 	Links []Link
+	// volumes from list
+	VolumesFrom []string
 	// hooks map for this definition
 	Hooks Hooks
 	// used in commands
@@ -299,9 +301,14 @@ func (set *Container) GetRunArguments() []interface{} {
 		}
 		linkArgs = append(linkArgs, "--link", linkStr)
 	}
+	var volumesFromArgs = make([]interface{}, 0, len(set.VolumesFrom)*2)
+	for _, vol := range set.VolumesFrom {
+		volumesFromArgs = append(volumesFromArgs, "--volumes-from", vol)
+	}
 
 	cmd := append([]interface{}{"--name", set.Name}, helpers.ToInterfaceSlice(set.ContainerArgs)...)
 	cmd = append(cmd, linkArgs...)
+	cmd = append(cmd, volumesFromArgs...)
 	cmd = append(cmd, imageName)
 	cmd = append(cmd, helpers.ToInterfaceSlice(set.Command)...)
 	return cmd

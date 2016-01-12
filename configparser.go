@@ -21,7 +21,7 @@ type ConfigParser struct {
 	// command to obtain config from
 	Command string
 	// args given to cli
-	Args    cli.Args
+	Args cli.Args
 }
 
 func NewSettingsParser(cmd string, args cli.Args) *ConfigParser {
@@ -173,6 +173,9 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 				}
 				setting.Hooks = curHooks
 			}
+		case "volumes-from":
+			argParts := strings.SplitN(args, " ", 2)
+			setting.VolumesFrom = append(setting.VolumesFrom, argParts[0])
 		case "global":
 		default:
 			setting.ContainerArgs = append(setting.ContainerArgs, "--"+action)
@@ -209,19 +212,42 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 		toClean := f.createCleanupTasks(&item)
 		projSettings.ContainerCleanupList = append(projSettings.ContainerCleanupList, toClean...)
 
-		ctrsToAdd := f.scaleContainers(&item)
-		projSettings.ContainerList = append(projSettings.ContainerList, ctrsToAdd...)
 		// at this point need to add capacity to slice and insert x number of scale containers
 
 		// resolve links
-		for i, link := range item.Links {
-			// for scaling links are bad so just putting it to first container
-			link.Container = projSettings.ProjectName + projSettings.ProjectSeparator + link.Container + projSettings.ProjectSeparator + "1"
-			item.Links[i] = link
-		}
+		f.processLinks(parsedConfig, &item, projSettings.ProjectName, projSettings.ProjectSeparator)
+
+		// resolve volumes from
+		f.processVolumesFrom(parsedConfig, &item, projSettings.ProjectName, projSettings.ProjectSeparator)
+
+		ctrsToAdd := f.scaleContainers(&item)
+
+		projSettings.ContainerList = append(projSettings.ContainerList, ctrsToAdd...)
 	}
 
 	return nil
+}
+
+func (f *ConfigParser) processVolumesFrom(parsedConfig map[string]container.Container, item *container.Container, projectName string, projectSep string) {
+	for i, ctrName := range item.VolumesFrom {
+		// TODO Not sure how to do this for scaling
+		if _, found := parsedConfig[ctrName]; found {
+			ctrName = projectName + projectSep + ctrName + projectSep + "1"
+			item.VolumesFrom[i] = ctrName
+		}
+	}
+}
+
+func (f *ConfigParser) processLinks(parsedConfig map[string]container.Container, item *container.Container, projectName string, projectSep string) {
+	for i, link := range item.Links {
+		// TODO right now, for scaling links are bad so just putting it to first container
+		container := link.Container
+		if _, found := parsedConfig[link.Container]; found {
+			container = projectName + projectSep + link.Container + projectSep + "1"
+		}
+		link.Container = container
+		item.Links[i] = link
+	}
 }
 
 func (f *ConfigParser) parseScaleArg(ctr *container.Container) {
@@ -249,7 +275,6 @@ func (f *ConfigParser) createCleanupTasks(ctr *container.Container) (tasks Setti
 	}
 	return
 }
-
 
 func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Container {
 

@@ -9,8 +9,8 @@ import (
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"io/ioutil"
-	"strings"
 	"path/filepath"
+	"strings"
 	"time"
 )
 

@@ -12,7 +12,7 @@ import (
 	"sort"
 	"sync"
 	"syscall"
-"text/template"
+	"text/template"
 )
 
 const containerShowTemplate = `{{.Name}}:
@@ -21,15 +21,15 @@ const containerShowTemplate = `{{.Name}}:
   Image: {{.Image}}{{if .Build}}
   Build: {{.Build}}{{end}}
   Order: {{.Placement}}
-  Args:  {{range $ind, $val := .ContainerArgs}}
-    {{$val}}{{end}}
   Links: {{range $ind, $link := .Links}}
     {{$link.Container}}{{if $link.Alias}}:{{$link.Alias}}{{end}}{{end}}
   Hooks: {{range $key, $val := .Hooks}}
     {{$key}}
       {{$val}}{{end}}
   Scale: {{.Scale}}
-  CMD:   {{range $ind, $val := .RunArguments}}
+  Volumes From: {{range $ind, $val := .VolumesFrom}}
+    {{$val}}{{end}}
+  Run Args:   {{range $ind, $val := .RunArguments}}
     {{$val}}{{end}}
 
 `
@@ -486,7 +486,7 @@ func (settings SettingsList) CapitanShow() error {
 	for _, set := range settings {
 		var (
 			tmpl *template.Template
-			err error
+			err  error
 		)
 		if tmpl, err = template.New("containerStringer").Parse(containerShowTemplate); err != nil {
 			return err

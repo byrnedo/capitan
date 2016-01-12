@@ -31,6 +31,10 @@ nats scale 1
 #
 app build ./
 app hostname ${PREFIX}_app
-app scale 1
+app scale 3
+app link mongo:mgo
+app link something:sth
+app volumes-from nats
+app volumes-from something
 
 EOF
