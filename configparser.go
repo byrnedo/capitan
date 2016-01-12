@@ -204,13 +204,6 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 			item.Image = item.Name
 		}
 
-		// resolve links
-		// TODO this must be disabled if scaling
-		for i, link := range item.Links {
-			link.Container = projSettings.ProjectName + projSettings.ProjectSeparator + link.Container
-			item.Links[i] = link
-		}
-
 		f.parseScaleArg(&item)
 
 		toClean := f.createCleanupTasks(&item)
@@ -219,6 +212,13 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 		ctrsToAdd := f.scaleContainers(&item)
 		projSettings.ContainerList = append(projSettings.ContainerList, ctrsToAdd...)
 		// at this point need to add capacity to slice and insert x number of scale containers
+
+		// resolve links
+		for i, link := range item.Links {
+			// for scaling links are bad so just putting it to first container
+			link.Container = projSettings.ProjectName + projSettings.ProjectSeparator + link.Container + projSettings.ProjectSeparator + "1"
+			item.Links[i] = link
+		}
 	}
 
 	return nil
