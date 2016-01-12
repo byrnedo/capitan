@@ -145,7 +145,19 @@ Allows for a custom shell command to be evaluated at the following points:
 Number of instances of the container to run. Default is 1.
 
 NOTE: this is untested with links ( I don't use links )
-    
+
+#### `link`
+An attempt to resolve a link to the first instance of a container is made. Otherwise the unresolved name is used.
+
+WARNING: When scaling, if the link resolves to a container defined in capitan's config, it will always resolve to the first instance.
+For example: `app link mycontainer:some-alias` will always resolve to `<project>_mycontainer_1`
+
+#### `volumes-from`
+
+An attempt to resolve a volume-from arg to the first instance of a container is made. Otherwise the unresolved name is used.
+
+WARNING: When scaling, if the container name resolves to a container defined in capitan's config, it will always resolve to the first instance.
+For example: `app volumes-from mycontainer` will always resolve to `<project>_mycontainer_1`
 
 ####`global project`
 The project name, defaults to current working directory

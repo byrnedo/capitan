@@ -301,6 +301,7 @@ func (set *Container) GetRunArguments() []interface{} {
 		}
 		linkArgs = append(linkArgs, "--link", linkStr)
 	}
+
 	var volumesFromArgs = make([]interface{}, 0, len(set.VolumesFrom)*2)
 	for _, vol := range set.VolumesFrom {
 		volumesFromArgs = append(volumesFromArgs, "--volumes-from", vol)
