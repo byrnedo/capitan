@@ -282,6 +282,19 @@ func main() {
 
 			},
 		},
+		{
+			Name:    "show",
+			Aliases: []string{},
+			Usage:   "Prints config as interpreted by Capitan",
+			Action: func(c *cli.Context) {
+				settings := getSettings()
+				if err := settings.ContainerList.CapitanShow(); err != nil {
+					Error.Println("Show failed:", err)
+					os.Exit(1)
+				}
+
+			},
+		},
 	}
 	app.Run(os.Args)
 }

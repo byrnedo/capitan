@@ -12,7 +12,27 @@ import (
 	"sort"
 	"sync"
 	"syscall"
+"text/template"
 )
+
+const containerShowTemplate = `{{.Name}}:
+  Name:  {{.ServiceName}}
+  Type:  {{.ServiceType}}
+  Image: {{.Image}}{{if .Build}}
+  Build: {{.Build}}{{end}}
+  Order: {{.Placement}}
+  Args:  {{range $ind, $val := .ContainerArgs}}
+    {{$val}}{{end}}
+  Links: {{range $ind, $link := .Links}}
+    {{$link.Container}}{{if $link.Alias}}:{{$link.Alias}}{{end}}{{end}}
+  Hooks: {{range $key, $val := .Hooks}}
+    {{$key}}
+      {{$val}}{{end}}
+  Scale: {{.Scale}}
+  CMD:   {{range $ind, $val := .RunArguments}}
+    {{$val}}{{end}}
+
+`
 
 var (
 	allDone = make(chan bool, 1)
@@ -455,6 +475,24 @@ func (settings SettingsList) CapitanPull(dryRun bool) error {
 			if err := helpers.PullImage(set.Image); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func (settings SettingsList) CapitanShow() error {
+	sort.Sort(settings)
+	for _, set := range settings {
+		var (
+			tmpl *template.Template
+			err error
+		)
+		if tmpl, err = template.New("containerStringer").Parse(containerShowTemplate); err != nil {
+			return err
+		}
+		if err = tmpl.Execute(os.Stdout, set); err != nil {
+			return err
 		}
 
 	}
