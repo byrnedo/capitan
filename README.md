@@ -1,5 +1,7 @@
 # Capitan
 
+[![GoDoc](https://godoc.org/github.com/byrnedo/capitan/consts?status.svg)](https://godoc.org/github.com/byrnedo/capitan/consts)
+
 Capitan is a tool for managing multiple Docker containers based largely on [crowdr](https://github.com/polonskiy/crowdr)
 
 Capitan is only a wrapper around the docker cli tool, no api usage whatsoever (well... an `inspect` command here and there).
