@@ -1,6 +1,6 @@
 # Capitan
 
-[![GoDoc](https://godoc.org/github.com/byrnedo/capitan/consts?status.svg)](https://godoc.org/github.com/byrnedo/capitan/consts)
+[![GoDoc](https://godoc.org/github.com/byrnedo/capitan?status.svg)](https://godoc.org/github.com/byrnedo/capitan)
 
 Capitan is a tool for managing multiple Docker containers based largely on [crowdr](https://github.com/polonskiy/crowdr)
 
