@@ -64,6 +64,7 @@ func (f *ConfigParser) parseOutput(out []byte) (*ProjectConfig, error) {
 
 }
 
+// The main parse function. Creates the final list of containers.
 func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfig, err error) {
 	//minimum of len1 at this point in parts
 
@@ -191,6 +192,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 
 }
 
+// Now that we have all settings do some house keeping and processing
 func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Container, projSettings *ProjectConfig) error {
 
 	// TODO duplicate containers for scaling
@@ -209,16 +211,13 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 
 		f.processScaleArg(&item)
 
-		toClean := f.createCleanupTasks(&item)
-		projSettings.ContainerCleanupList = append(projSettings.ContainerCleanupList, toClean...)
-
-		// at this point need to add capacity to slice and insert x number of scale containers
+		f.processCleanupTasks(projSettings, &item)
 
 		// resolve links
-		f.processLinks(parsedConfig, &item, projSettings.ProjectName, projSettings.ProjectSeparator)
+		f.processLinks(parsedConfig, &item)
 
 		// resolve volumes from
-		f.processVolumesFrom(parsedConfig, &item, projSettings.ProjectName, projSettings.ProjectSeparator)
+		f.processVolumesFrom(parsedConfig, &item)
 
 		ctrsToAdd := f.scaleContainers(&item)
 
@@ -228,28 +227,31 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 	return nil
 }
 
-func (f *ConfigParser) processVolumesFrom(parsedConfig map[string]container.Container, item *container.Container, projectName string, projectSep string) {
+// Parse the volumes-from args and try and find first container with that type
+func (f *ConfigParser) processVolumesFrom(parsedConfig map[string]container.Container, item *container.Container) {
 	for i, ctrName := range item.VolumesFrom {
 		// TODO Not sure how to do this for scaling
 		if _, found := parsedConfig[ctrName]; found {
-			ctrName = projectName + projectSep + ctrName + projectSep + "1"
+			ctrName = item.ProjectName + item.ProjectNameSeparator + ctrName + item.ProjectNameSeparator + "1"
 			item.VolumesFrom[i] = ctrName
 		}
 	}
 }
 
-func (f *ConfigParser) processLinks(parsedConfig map[string]container.Container, item *container.Container, projectName string, projectSep string) {
+// Parse the link args and try and find first container with that type
+func (f *ConfigParser) processLinks(parsedConfig map[string]container.Container, item *container.Container) {
 	for i, link := range item.Links {
 		// TODO right now, for scaling links are bad so just putting it to first container
 		container := link.Container
 		if _, found := parsedConfig[link.Container]; found {
-			container = projectName + projectSep + link.Container + projectSep + "1"
+			container = item.ProjectName + item.ProjectNameSeparator + link.Container + item.ProjectNameSeparator + "1"
 		}
 		link.Container = container
 		item.Links[i] = link
 	}
 }
 
+// Parse the scale argument and set the container's scale property
 func (f *ConfigParser) processScaleArg(ctr *container.Container) {
 	if f.Args.Get(0) == "scale" {
 		if f.Args.Get(1) == ctr.ServiceType {
@@ -262,7 +264,9 @@ func (f *ConfigParser) processScaleArg(ctr *container.Container) {
 	}
 }
 
-func (f *ConfigParser) createCleanupTasks(ctr *container.Container) (tasks SettingsList) {
+// Create list of containers to cleanup when scaling
+func (f *ConfigParser) processCleanupTasks(projSettings *ProjectConfig, ctr *container.Container) {
+	var tasks SettingsList
 	svcs := helpers.InstancesOfService(ctr.Name)
 	for _, existing := range svcs {
 		instNum, err := helpers.GetNumericSuffix(existing.Name, ctr.ProjectNameSeparator)
@@ -273,9 +277,11 @@ func (f *ConfigParser) createCleanupTasks(ctr *container.Container) (tasks Setti
 			tasks = append(tasks, tempCtr)
 		}
 	}
+	projSettings.ContainerCleanupList = append(projSettings.ContainerCleanupList, tasks...)
 	return
 }
 
+// Create copies of containers which need to scale
 func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Container {
 
 	ctrCopies := make([]*container.Container, ctr.Scale)
