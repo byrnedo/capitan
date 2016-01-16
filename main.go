@@ -19,7 +19,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "capitan"
 	app.Usage = "Deploy and orchestrate docker containers"
-	app.Version = "0.1"
+	app.Version = VERSION
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
