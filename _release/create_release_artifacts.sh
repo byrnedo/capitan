@@ -7,14 +7,12 @@ version=$(git describe --tag)
 
 cd $SCRIPT_PATH/..
 
-go get github.com/tools/godep
-
 for linux_arch in 386 amd64
 do
     deb_arch=$linux_arch
     [[ "$deb_arch" = "386" ]] && deb_arch=i386
     pkg_name=capitan_${version}_$deb_arch
-    env GOOS=linux GOARCH=$linux_arch godep go build -o build/releases/${pkg_name}/capitan
+    env GOOS=linux GOARCH=$linux_arch go build -o build/releases/${pkg_name}/capitan
     (cd build/releases/${pkg_name} && zip ../../${pkg_name}.zip  capitan)
     mkdir -p build/releases/${pkg_name}/usr/local/bin
     mv  build/releases/${pkg_name}/capitan  build/releases/${pkg_name}/usr/local/bin/capitan

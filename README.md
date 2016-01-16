@@ -10,6 +10,8 @@ This means it will basically work with all versions of docker.
 ![Capitan showcase]
 (output.gif)
 
+Head over to the [releases](https://github.com/byrnedo/capitan/releases) page to download a pre-build binary or deb file.
+
 ## Capitan Features
 
 1. Shell Support - Config is read from stdout of a shell command. Extremely flexible
