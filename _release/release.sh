@@ -18,7 +18,7 @@ then
 fi
 
 set +e
-rm -rf ../build
+rm -rf ../build/*
 set -e
 
 cat <<EOF > $BUILD_PATH/../version.go
