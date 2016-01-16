@@ -10,7 +10,13 @@ This means it will basically work with all versions of docker.
 ![Capitan showcase]
 (output.gif)
 
+## Installation
+
 Head over to the [releases](https://github.com/byrnedo/capitan/releases) page to download a pre-build binary or deb file.
+
+Or using go:
+
+    go get github.com/byrnedo/capitan
 
 ## Capitan Features
 
