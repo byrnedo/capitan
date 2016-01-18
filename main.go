@@ -66,7 +66,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings()
 				settings.LaunchSignalWatcher()
-				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
+				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanUp(attach, dryRun); err != nil {
@@ -89,7 +89,7 @@ func main() {
 			Usage:   "Create containers, but don't run them",
 			Action: func(c *cli.Context) {
 				settings := getSettings()
-				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
+				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanCreate(dryRun); err != nil {
@@ -106,7 +106,7 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings()
 				settings.LaunchSignalWatcher()
-				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
+				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanStart(attach, dryRun); err != nil {
@@ -131,7 +131,7 @@ func main() {
 				settings := getSettings()
 				if err := settings.ContainerCleanupList.Filter(func(i *container.Container) bool {
 					return i.ServiceType == c.Args().Get(0)
-				}).CapitanStop(nil, dryRun); err != nil {
+				}).CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.Filter(func(i *container.Container) bool {
@@ -149,7 +149,7 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
-				if err := settings.ContainerCleanupList.CapitanStop(nil, dryRun); err != nil {
+				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanRestart(c.Args(), dryRun); err != nil {

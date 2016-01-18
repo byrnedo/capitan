@@ -84,6 +84,7 @@ func (h Hooks) Run(hookName string, containerName string) error {
 	}
 	ses.Stdout = os.Stdout
 	ses.Stderr = os.Stderr
+	ses.Stdin = os.Stdin
 	return ses.Run()
 }
 
