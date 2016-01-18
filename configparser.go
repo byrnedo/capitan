@@ -179,8 +179,12 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 			setting.VolumesFrom = append(setting.VolumesFrom, argParts[0])
 		case "global":
 		default:
-			setting.ContainerArgs = append(setting.ContainerArgs, "--"+action)
-			setting.ContainerArgs = append(setting.ContainerArgs, args)
+			if action != "" {
+				setting.ContainerArgs = append(setting.ContainerArgs, "--" + action)
+				if args != "" {
+					setting.ContainerArgs = append(setting.ContainerArgs, args)
+				}
+			}
 		}
 
 		cmdsMap[contr] = setting
