@@ -8,7 +8,6 @@ import (
 	"github.com/byrnedo/capitan/logger"
 	. "github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
-	"github.com/mgutz/str"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -61,27 +60,22 @@ const (
 type Hooks map[string]string
 
 // Runs a hook command if it exists for a specific container
-func (h Hooks) Run(hookName string, containerName string) error {
+func (h Hooks) Run(hookName string, ctr *Container) error {
 	var (
 		hookScript string
 		found      bool
-		ses        *sh.Session
-		argVs      []string
+		ses        *ShellSession
 	)
+
 	if hookScript, found = h[hookName]; !found {
 		return nil
 	}
 
-	ses = sh.NewSession()
-	ses.SetEnv("CAPITAN_CONTAINER_NAME", containerName)
+	ses = NewContainerShellSession(ctr)
 	ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
 
-	argVs = str.ToArgv(hookScript)
-	if len(argVs) > 1 {
-		ses.Command(argVs[0], helpers.ToInterfaceSlice(argVs[1:])...)
-	} else {
-		ses.Command(argVs[0])
-	}
+	ses.Command("bash", "-c", hookScript)
+
 	ses.Stdout = os.Stdout
 	ses.Stderr = os.Stderr
 	ses.Stdin = os.Stdin
@@ -121,17 +115,19 @@ type Container struct {
 	ProjectName string
 	// the project name separator, usually "_"
 	ProjectNameSeparator string
+	// the number of this container, relates to scale
+	InstanceNumber int
 }
 
 // Builds an image for a container
 func (set *Container) BuildImage() error {
-	if err := set.Hooks.Run("before.build", set.Name); err != nil {
+	if err := set.Hooks.Run("before.build", set); err != nil {
 		return err
 	}
 	if _, err := helpers.RunCmd("build", "--tag", set.Image, set.Build); err != nil {
 		return err
 	}
-	if err := set.Hooks.Run("after.build", set.Name); err != nil {
+	if err := set.Hooks.Run("after.build", set); err != nil {
 		return err
 	}
 	return nil
@@ -140,7 +136,7 @@ func (set *Container) BuildImage() error {
 func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) error {
 
 	var (
-		ses *sh.Session
+		ses *ShellSession
 		err error
 	)
 
@@ -190,6 +186,17 @@ func (set *Container) RecreateAndRun(attach bool, dryRun bool, wg *sync.WaitGrou
 	return nil
 }
 
+func createCapitanContainerLabels(ctr *Container, args []interface{}) []interface{} {
+	return []interface{}{
+		"--label",
+		UniqueLabelName + "=" + fmt.Sprintf("'%s'", args),
+		"--label",
+		ServiceLabelName + "=" + ctr.ServiceName,
+		"--label",
+		ProjectLabelName + "=" + ctr.ProjectName,
+	}
+}
+
 // Run a container
 func (set *Container) Create(dryRun bool) error {
 	set.Action = Run
@@ -198,19 +205,12 @@ func (set *Container) Create(dryRun bool) error {
 	if dryRun {
 		return nil
 	}
-	if err := set.Hooks.Run("before.create", set.Name); err != nil {
+	if err := set.Hooks.Run("before.create", set); err != nil {
 		return err
 	}
 
 	cmd := set.RunArguments
-	labels := []interface{}{
-		"--label",
-		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
-		"--label",
-		ServiceLabelName + "=" + set.ServiceName,
-		"--label",
-		ProjectLabelName + "=" + set.ProjectName,
-	}
+	labels := createCapitanContainerLabels(set, cmd)
 	cmd = append(labels, cmd...)
 
 	cmd = append([]interface{}{"create"}, cmd...)
@@ -218,7 +218,7 @@ func (set *Container) Create(dryRun bool) error {
 		return err
 	}
 
-	return set.Hooks.Run("after.create", set.Name)
+	return set.Hooks.Run("after.create", set)
 }
 
 // Run a container
@@ -229,19 +229,12 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	if dryRun {
 		return nil
 	}
-	if err := set.Hooks.Run("before.run", set.Name); err != nil {
+	if err := set.Hooks.Run("before.run", set); err != nil {
 		return err
 	}
 
 	cmd := set.RunArguments
-	labels := []interface{}{
-		"--label",
-		UniqueLabelName + "=" + fmt.Sprintf("%s", cmd),
-		"--label",
-		ServiceLabelName + "=" + set.ServiceName,
-		"--label",
-		ProjectLabelName + "=" + set.ProjectName,
-	}
+	labels := createCapitanContainerLabels(set, cmd)
 	cmd = append(labels, cmd...)
 
 	if attach {
@@ -257,32 +250,40 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		}
 	}
 
-	return set.Hooks.Run("after.run", set.Name)
+	return set.Hooks.Run("after.run", set)
 }
 
 func (set *Container) launchDaemonCommand(cmd []interface{}) error {
 	var (
-		ses *sh.Session
+		ses *ShellSession
 		err error
 	)
-	ses = sh.NewSession()
-	if logger.GetLevel() == DebugLevel {
-		ses.ShowCMD = true
+	ses = NewContainerShellSession(set)
+
+	concStr := "docker "
+	for _, arg := range cmd {
+		concStr += fmt.Sprintf("%s",arg) + " "
 	}
-	err = ses.Command("docker", cmd...).Run()
+	concStr = strings.Trim(concStr, " ")
+
+	err = ses.Command("bash", "-c", concStr).Run()
 	return err
 }
 
-func (set *Container) startLoggedCommand(cmd []interface{}) (*sh.Session, error) {
-	ses := sh.NewSession()
-	if logger.GetLevel() == DebugLevel {
-		ses.ShowCMD = true
-	}
+func (set *Container) startLoggedCommand(cmd []interface{}) (*ShellSession, error) {
+	ses := NewContainerShellSession(set)
+
 	color := nextColor()
 	ses.Stdout = NewContainerLogWriter(os.Stdout, set.Name, color)
 	ses.Stderr = NewContainerLogWriter(os.Stderr, set.Name, color)
 
-	err := ses.Command("docker", cmd...).Start()
+	concStr := "docker "
+	for _, arg := range cmd {
+		concStr += fmt.Sprintf("%s",arg) + " "
+	}
+	concStr = strings.Trim(concStr, " ")
+
+	err := ses.Command("bash", "-c", concStr).Start()
 
 	return ses, err
 }
@@ -319,7 +320,7 @@ func (set *Container) GetRunArguments() []interface{} {
 func (set *Container) Attach(wg *sync.WaitGroup) error {
 	var (
 		err error
-		ses *sh.Session
+		ses *ShellSession
 	)
 	if ses, err = set.startLoggedCommand(append([]interface{}{"attach", "--sig-proxy=false"}, set.Name)); err != nil {
 		return err
@@ -350,7 +351,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		return nil
 	}
 
-	if err = set.Hooks.Run("before.start", set.Name); err != nil {
+	if err = set.Hooks.Run("before.start", set); err != nil {
 		return err
 	}
 
@@ -363,7 +364,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		}
 	}
 
-	if err := set.Hooks.Run("after.start", set.Name); err != nil {
+	if err := set.Hooks.Run("after.start", set); err != nil {
 		return err
 	}
 	return nil
@@ -373,14 +374,14 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 // TODO needs to respect scale
 func (set *Container) Restart(args []string) error {
 	set.Action = Restart
-	if err := set.Hooks.Run("before.start", set.Name); err != nil {
+	if err := set.Hooks.Run("before.start", set); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := helpers.RunCmd(append([]interface{}{"restart"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := set.Hooks.Run("after.start", set.Name); err != nil {
+	if err := set.Hooks.Run("after.start", set); err != nil {
 		return err
 	}
 	return nil
@@ -421,14 +422,14 @@ func (set *Container) Logs() (*sh.Session, error) {
 // TODO needs to respect scale
 func (set *Container) Kill(args []string) error {
 	set.Action = Kill
-	if err := set.Hooks.Run("before.kill", set.Name); err != nil {
+	if err := set.Hooks.Run("before.kill", set); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := helpers.RunCmd(append([]interface{}{"kill"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := set.Hooks.Run("after.kill", set.Name); err != nil {
+	if err := set.Hooks.Run("after.kill", set); err != nil {
 		return err
 	}
 	return nil
@@ -439,14 +440,14 @@ func (set *Container) Kill(args []string) error {
 // TODO needs to respect scale
 func (set *Container) Stop(args []string) error {
 	set.Action = Stop
-	if err := set.Hooks.Run("before.stop", set.Name); err != nil {
+	if err := set.Hooks.Run("before.stop", set); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := helpers.RunCmd(append([]interface{}{"stop"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := set.Hooks.Run("after.stop", set.Name); err != nil {
+	if err := set.Hooks.Run("after.stop", set); err != nil {
 		return err
 	}
 	return nil
@@ -457,14 +458,14 @@ func (set *Container) Stop(args []string) error {
 func (set *Container) Rm(args []string) error {
 
 	set.Action = Remove
-	if err := set.Hooks.Run("before.rm", set.Name); err != nil {
+	if err := set.Hooks.Run("before.rm", set); err != nil {
 		return err
 	}
 	args = append(args, set.Name)
 	if _, err := helpers.RunCmd(append([]interface{}{"rm"}, helpers.ToInterfaceSlice(args)...)...); err != nil {
 		return err
 	}
-	if err := set.Hooks.Run("after.rm", set.Name); err != nil {
+	if err := set.Hooks.Run("after.rm", set); err != nil {
 		return err
 	}
 	return nil

@@ -13,7 +13,7 @@ redis image redis:latest
 redis hostname ${PREFIX}_redis
 
 # sleep one second after 'run' command
-redis hook after.run sleep 1
+redis hook after.run echo "instance \$CAPITAN_CONTAINER_INSTANCE_NUMBER" && sleep 1
 
 # sleep one second after 'start' command
 redis hook after.start sleep 1
@@ -26,6 +26,7 @@ redis scale 1
 mongo image mongo:latest
 mongo command mongod --smallfiles
 mongo hostname ${PREFIX}_mongo
+mongo env test=\$CAPITAN_INSTANCE_NUMBER
 
 # --------------------------------------------------
 # General nats container

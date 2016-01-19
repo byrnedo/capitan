@@ -293,6 +293,7 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Co
 	for i := 0; i < ctr.Scale; i++ {
 		ctrCopies[i] = new(container.Container)
 		*ctrCopies[i] = *ctr
+		ctrCopies[i].InstanceNumber = i+1
 		ctrCopies[i].Name = fmt.Sprintf("%s%s%d", ctr.Name, ctr.ProjectNameSeparator, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
 

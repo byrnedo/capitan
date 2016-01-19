@@ -175,6 +175,51 @@ The project name, defaults to current working directory
 #### `global project_sep`
 String to use to create container name from `project` and name specified in config
 
+### Environment Variables 
+
+The following environment variables are available when creating the containers and when running hooks
+
+    # container name
+    CAPITAN_CONTAINER_NAME
+    # container type 
+    CAPITAN_CONTAINER_SERVICE_TYPE
+    # instance of this type,eg if you have scale = 5 then each container will have their own instance number from 1 -> 5
+    CAPITAN_CONTAINER_INSTANCE_NUMBER
+    # the project name
+    CAPITAN_PROJECT_NAME
+    
+The following environment variables are only available to hook scripts
+
+    CAPITAN_HOOK_NAME
+
+For example, following `capitan.cfg.sh`
+
+    #!/bin/bash
+
+    cat <<EOF
+    global project test
+
+    mysql name mymysql
+    mysql label containerName=\$CAPITAN_CONTAINER_NAME
+    mysql label containerServiceName=\$CAPITAN_CONTAINER_SERVICE_NAME
+    mysql label containerInstanceNumber=\$CAPITAN_CONTAINER_INSTANCE_NUMBER
+    mysql label projectName=\$CAPITAN_PROJECT_NAME
+    mysql hook after.run echo "hook: \$CAPITAN_HOOK_NAME: ran \$CAPITAN_CONTAINER_NAME in project \$CAPITAN_PROJECT_NAME"
+    EOF
+
+Would result in the following run command:
+
+    docker run -d --label containerName=test_mysql_1 
+        --label containerServiceName=mysql
+        --label containerInstanceNumber=1
+        --label projectName=test
+
+And the following hook ouput
+
+    Running test_mysql_1
+    34e7fffb937c3154c2a963ee605c7958404aa5d80519db4ef3d2a80a06974021
+    hook: after.run: ran test_mysql_1 in project test
+
 
 ### Example Config
     
