@@ -26,8 +26,10 @@ package main
 const VERSION = "$RELEASE_VERSION"
 EOF
 
+set +e 
 git commit $BUILD_PATH/../version.go -m "Release version $RELEASE_VERSION"
 git push origin master
+set -e
 
 github-release release \
     --user byrnedo \

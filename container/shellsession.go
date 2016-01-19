@@ -1,7 +1,6 @@
 package container
 
 import (
-	"fmt"
 	"github.com/byrnedo/capitan/logger"
 	"github.com/codeskyblue/go-sh"
 	"strconv"
