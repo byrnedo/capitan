@@ -209,7 +209,8 @@ For example, following `capitan.cfg.sh`
 
 Would result in the following run command:
 
-    docker run -d --label containerName=test_mysql_1 
+    docker run -d --name test_mysql_1 
+        --label containerName=test_mysql_1 
         --label containerServiceName=mysql
         --label containerInstanceNumber=1
         --label projectName=test
@@ -219,6 +220,8 @@ And the following hook ouput
     Running test_mysql_1
     34e7fffb937c3154c2a963ee605c7958404aa5d80519db4ef3d2a80a06974021
     hook: after.run: ran test_mysql_1 in project test
+
+Note that the `$` must be escaped if using HEREDOC or double quotes in bash.
 
 
 ### Example Config
