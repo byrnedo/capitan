@@ -41,6 +41,7 @@ var (
 type ProjectConfig struct {
 	ProjectName          string
 	ProjectSeparator     string
+	IsInteractive		 bool
 	ContainerList        SettingsList
 	ContainerCleanupList SettingsList
 }
@@ -112,16 +113,20 @@ func (settings *ProjectConfig) LaunchSignalWatcher() {
 			sig := <-signalChannel
 			switch sig {
 			case os.Interrupt, syscall.SIGTERM:
-				calls++
-				if calls == 1 {
-					go func() {
-						settings.ContainerList.CapitanStop(nil, false)
-						stopDone <- true
-					}()
-				} else if calls == 2 {
-					killBegan <- true
-					settings.ContainerList.CapitanKill(nil, false)
-					killDone <- true
+				if settings.IsInteractive {
+					calls++
+					if calls == 1 {
+						go func() {
+							settings.ContainerList.CapitanStop(nil, false)
+							stopDone <- true
+						}()
+					} else if calls == 2 {
+						killBegan <- true
+						settings.ContainerList.CapitanKill(nil, false)
+						killDone <- true
+					}
+				} else {
+					os.Exit(1)
 				}
 			default:
 				Debug.Println("Unhandled signal", sig)

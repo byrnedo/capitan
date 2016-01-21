@@ -308,5 +308,8 @@ func getSettings() (settings *ProjectConfig) {
 		Error.Printf("Error running command: %s\n", err)
 		os.Exit(1)
 	}
+	if attach {
+		settings.IsInteractive = true
+	}
 	return settings
 }
