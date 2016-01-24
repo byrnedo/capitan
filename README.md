@@ -32,8 +32,10 @@ Or using go:
 #### `capitan up`
 Create then run or update containers 
 Recreates if:
-    1. If newer image is found it will remove the old container and run a new one
-    2. Container config has changed
+
+1. ~~If newer image is found it will remove the old container and run a new one~~ No longer does this as capitan can't know which node to check images for when talking to a swarm.
+2. Container config has changed
+    
 Starts stopped containers
 
     capitan up

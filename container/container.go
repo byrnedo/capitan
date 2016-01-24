@@ -57,32 +57,37 @@ const (
 	Remove  AppliedAction = "remove"
 )
 
-type Hooks map[string][]string
+type Hook struct {
+	Scripts []string
+	Ses *ShellSession
+}
+
+type Hooks map[string]*Hook
 
 // Runs a hook command if it exists for a specific container
 func (h Hooks) Run(hookName string, ctr *Container) error {
 	var (
-		hookScripts []string
+		hook *Hook
 		found      bool
-		ses        *ShellSession
 		err 		error
 	)
 
-	if hookScripts, found = h[hookName]; !found {
+	if hook, found = h[hookName]; !found {
 		return nil
 	}
 
-	for _, script := range hookScripts {
-		ses = NewContainerShellSession(ctr)
-		ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
 
-		ses.Command("bash", "-c", script)
+	for _, script := range hook.Scripts {
+		hook.Ses = NewContainerShellSession(ctr)
+		hook.Ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
 
-		ses.Stdout = os.Stdout
-		ses.Stderr = os.Stderr
-		ses.Stdin = os.Stdin
+		hook.Ses.Command("bash", "-c", script)
 
-		if err = ses.Run(); err != nil {
+		hook.Ses.Stdout = os.Stdout
+		hook.Ses.Stderr = os.Stderr
+		hook.Ses.Stdin = os.Stdin
+
+		if err = hook.Ses.Run(); err != nil {
 			return err
 		}
 	}

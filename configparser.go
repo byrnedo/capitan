@@ -109,7 +109,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 		if _, found := cmdsMap[contr]; !found {
 			cmdsMap[contr] = container.Container{
 				Placement: len(cmdsMap),
-				Hooks:     make(map[string][]string, 0),
+				Hooks:     make(map[string]*container.Hook, 0),
 				Scale:     1,
 			}
 		}
@@ -169,8 +169,16 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 			if len(args) > 0 {
 				curHooks := setting.Hooks
 				argParts := strings.SplitN(args, " ", 2)
+				hookName := argParts[0]
 				if len(argParts) > 1 {
-					curHooks[argParts[0]] = append(curHooks[argParts[0]], argParts[1])
+					hookScript := argParts[1]
+
+					hook := curHooks[hookName]
+					if hook == nil {
+						hook = new(container.Hook)
+					}
+					hook.Scripts = append(hook.Scripts, hookScript)
+					curHooks[hookName] = hook
 				}
 				setting.Hooks = curHooks
 			}

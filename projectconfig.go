@@ -113,6 +113,15 @@ func (settings *ProjectConfig) LaunchSignalWatcher() {
 			sig := <-signalChannel
 			switch sig {
 			case os.Interrupt, syscall.SIGTERM:
+
+				for _, con := range append(settings.ContainerCleanupList, settings.ContainerList...) {
+					for _, hooks := range con.Hooks {
+						if hooks.Ses != nil {
+							Info.Println("killing hook...")
+							hooks.Ses.Kill(syscall.SIGKILL)
+						}
+					}
+				}
 				if settings.IsInteractive {
 					calls++
 					if calls == 1 {
@@ -244,15 +253,16 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 			continue
 		}
 
-		if newerImage(set.Name, set.Image) {
-			// remove and restart
-			Info.Println("Removing (different image available):", set.Name)
-			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
-				return err
-			}
-
-			continue
-		}
+		// disabling as this doesn't work with swarm (how do I know which node to look at??)
+//		if newerImage(set.Name, set.Image) {
+//			// remove and restart
+//			Info.Println("Removing (different image available):", set.Name)
+//			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
+//				return err
+//			}
+//
+//			continue
+//		}
 
 		if haveArgsChanged(set.Name, set.RunArguments) {
 			// remove and restart
