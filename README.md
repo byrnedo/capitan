@@ -227,6 +227,13 @@ Note that the `$` must be escaped if using HEREDOC or double quotes in bash.
 
 
 ### Example Config
+
+Check out [dev-stack](https://github.com/byrnedo/dev-stack) for an example. 
+Clone it and just run `capitan --dry up`.
+
+Or check out the `./example` dir.
+
+Also, here's something to whet your appetite:
     
     #!/bin/bash
     PREFIX=dev
@@ -238,8 +245,8 @@ Note that the `$` must be escaped if using HEREDOC or double quotes in bash.
     redis image redis:latest
     redis hostname ${PREFIX}_redis
     redis publish 6379
-    redis hook after.run sleep 10
-    redis hook after.start sleep 10
+    redis hook after.run echo "look everyone, I ran \$CAPITAN_CONTAINER_NAME" && sleep 3
+    redis hook after.start sleep 3
     
     #
     # General mongodb container
