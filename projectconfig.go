@@ -25,7 +25,8 @@ const containerShowTemplate = `{{.Name}}:
     {{$link.Container}}{{if $link.Alias}}:{{$link.Alias}}{{end}}{{end}}
   Hooks: {{range $key, $val := .Hooks}}
     {{$key}}
-      {{$val}}{{end}}
+      {{range $hook := $val.Scripts}}{{$hook}}
+      {{end}}{{end}}
   Scale: {{.Scale}}
   Volumes From: {{range $ind, $val := .VolumesFrom}}
     {{$val}}{{end}}
