@@ -20,7 +20,9 @@
 
     <section class="main-content">
       <h1>
-<a id="capitan" class="anchor" href="#capitan" aria-hidden="true"><span class="octicon octicon-link"></span></a>Capitan</h1>
+<a id="capitan" class="anchor" href="#capitan" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Capitan</h1>
+
+<p><a href="https://godoc.org/github.com/byrnedo/capitan"><img src="https://godoc.org/github.com/byrnedo/capitan?status.svg" alt="GoDoc"></a></p>
 
 <p>Capitan is a tool for managing multiple Docker containers based largely on <a href="https://github.com/polonskiy/crowdr">crowdr</a></p>
 
@@ -30,107 +32,17 @@ This means it will basically work with all versions of docker.</p>
 <p><img src="output.gif" alt="Capitan showcase"></p>
 
 <h2>
-<a id="commands" class="anchor" href="#commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Commands</h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation</h2>
 
-<h3>
-<a id="invasive-commands" class="anchor" href="#invasive-commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Invasive commands</h3>
+<p>Head over to the <a href="https://github.com/byrnedo/capitan/releases">releases</a> page to download a pre-build binary or deb file.</p>
 
-<ul>
-<li>
-<p><code>capitan up</code>      Create then run or update containers </p>
+<p>Or using go:</p>
 
-<ul>
-<li>Recreates if:
-
-<ol>
-<li>If newer image is found it will remove the old container and run a new one</li>
-<li>Container config has changed</li>
-</ol>
-</li>
-<li><p>Starts stopped containers</p></li>
-<li><p>Optionally can attach to output using <code>--attach|-a</code> flag.</p></li>
-</ul>
-</li>
-<li>
-<p><code>capitan start</code>   Start stopped containers</p>
-
-<ul>
-<li>Optionally can attach to output using <code>--attach|-a</code> flag.</li>
-</ul>
-</li>
-<li>
-<p><code>capitan restart</code> Restart containers</p>
-
-<ul>
-<li>Further arguments passed through to docker, example <code>capitan start -t 5</code>
-</li>
-</ul>
-</li>
-<li>
-<p><code>capitan stop</code>    Stop running containers</p>
-
-<ul>
-<li>Further arguments passed through to docker, example <code>capitan stop -t 5</code>
-</li>
-</ul>
-</li>
-<li>
-<p><code>capitan kill</code>    Kill running containers using SIGKILL or a specified signal</p>
-
-<ul>
-<li>Further arguments passed through to docker, example <code>capitan kill --signal KILL</code>
-</li>
-</ul>
-</li>
-<li>
-<p><code>capitan rm</code>      Remove stopped containers</p>
-
-<ul>
-<li>Further arguments passed through to docker, example <code>capitan rm -f</code>
-</li>
-</ul>
-</li>
-</ul>
-
-<h3>
-<a id="non-invasive-commands" class="anchor" href="#non-invasive-commands" aria-hidden="true"><span class="octicon octicon-link"></span></a>Non invasive commands</h3>
-
-<ul>
-<li>
-<p><code>capitan ps</code>      Show container status</p>
-
-<ul>
-<li>Further arguments passed through to docker, example <code>capitan ps -a</code>
-</li>
-</ul>
-</li>
-<li><p><code>capitan ip</code>      Show container ip addresses</p></li>
-<li><p><code>capitan logs</code>    Follow container logs</p></li>
-<li><p><code>capitan pull</code>    Pull images for all containers</p></li>
-<li><p><code>capitan build</code>   Build any containers with 'build' flag set (WIP)</p></li>
-</ul>
+<pre><code>go get github.com/byrnedo/capitan
+</code></pre>
 
 <h2>
-<a id="why" class="anchor" href="#why" aria-hidden="true"><span class="octicon octicon-link"></span></a>Why...</h2>
-
-<h3>
-<a id="not-docker-compose" class="anchor" href="#not-docker-compose" aria-hidden="true"><span class="octicon octicon-link"></span></a>...not docker-compose?</h3>
-
-<ol>
-<li>lack of variables</li>
-<li>options support is always behind actual docker version</li>
-<li>up restarts containers in wrong order</li>
-<li>no hooks system</li>
-<li>hassle free replacement for non x86/x86_64 architectures</li>
-</ol>
-
-<h3>
-<a id="not-crowdr" class="anchor" href="#not-crowdr" aria-hidden="true"><span class="octicon octicon-link"></span></a>...not crowdr?</h3>
-
-<p>Written totally in bash. I love bash but I personally feel safer with go. That is all.</p>
-
-<h2>
-<a id="capitan-features" class="anchor" href="#capitan-features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Capitan Features</h2>
+<a id="capitan-features" class="anchor" href="#capitan-features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Capitan Features</h2>
 
 <ol>
 <li>Shell Support - Config is read from stdout of a shell command. Extremely flexible</li>
@@ -140,10 +52,148 @@ This means it will basically work with all versions of docker.</p>
 </ol>
 
 <h2>
-<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h2>
+<a id="commands" class="anchor" href="#commands" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Commands</h2>
 
 <h3>
-<a id="global-options" class="anchor" href="#global-options" aria-hidden="true"><span class="octicon octicon-link"></span></a>Global options</h3>
+<a id="invasive-commands" class="anchor" href="#invasive-commands" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Invasive commands</h3>
+
+<h4>
+<a id="capitan-up" class="anchor" href="#capitan-up" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan up</code>
+</h4>
+
+<p>Create then run or update containers 
+Recreates if:</p>
+
+<ol>
+<li>
+<del>If newer image is found it will remove the old container and run a new one</del> No longer does this as capitan can't know which node to check images for when talking to a swarm.</li>
+<li>Container config has changed</li>
+</ol>
+
+<p>Starts stopped containers</p>
+
+<pre><code>capitan up
+# Optionally can attach to output using `--attach|-a` flag.
+capitan up -a
+</code></pre>
+
+<h4>
+<a id="capitan-create" class="anchor" href="#capitan-create" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan create</code>
+</h4>
+
+<p>Create but don't run containers</p>
+
+<pre><code>capitan create
+</code></pre>
+
+<h4>
+<a id="capitan-start" class="anchor" href="#capitan-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan start</code>
+</h4>
+
+<p>Start stopped containers</p>
+
+<pre><code>capitan start
+# Optionally can attach to output using `--attach|-a` flag.
+capitan start -a
+</code></pre>
+
+<h4>
+<a id="capitan-scale" class="anchor" href="#capitan-scale" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan scale</code>
+</h4>
+
+<p>Start or stop instances of a container until required amount are running</p>
+
+<pre><code># run 5 instances of mysql
+capitan scale mysql 5
+</code></pre>
+
+<p>NOTE: for containers started via this command to be accepted by further commands, the config output must be altered to state the required instances</p>
+
+<h5>
+<a id="capitan-restart" class="anchor" href="#capitan-restart" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan restart</code>
+</h5>
+
+<p>Restart containers</p>
+
+<pre><code>capitan restart
+# Further arguments passed through to docker, example `capitan start -t 5`
+capitan restart -t 10
+</code></pre>
+
+<h5>
+<a id="capitan-stop" class="anchor" href="#capitan-stop" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan stop</code>
+</h5>
+
+<p>Stop running containers</p>
+
+<pre><code>capitan stop
+# Further arguments passed through to docker, example `capitan stop -t 5`
+capitan stop -t 10
+</code></pre>
+
+<h5>
+<a id="capitan-kill" class="anchor" href="#capitan-kill" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan kill</code>
+</h5>
+
+<p>Kill running containers using SIGKILL or a specified signal</p>
+
+<pre><code>capitan kill
+# Further arguments passed through to docker, example `capitan kill --signal KILL`
+capitan kill --signal KILL
+</code></pre>
+
+<h5>
+<a id="capitan-rm" class="anchor" href="#capitan-rm" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan rm</code>
+</h5>
+
+<p>Remove stopped containers</p>
+
+<pre><code>capitan rm
+# Further arguments passed through to docker, example `capitan rm -f`
+capitan rm -fv
+</code></pre>
+
+<h3>
+<a id="non-invasive-commands" class="anchor" href="#non-invasive-commands" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Non invasive commands</h3>
+
+<h5>
+<a id="capitan-ps" class="anchor" href="#capitan-ps" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan ps</code>
+</h5>
+
+<p>Show container status</p>
+
+<pre><code>- Further arguments passed through to docker, example `capitan ps -a`
+</code></pre>
+
+<h5>
+<a id="capitan-ip" class="anchor" href="#capitan-ip" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan ip</code>
+</h5>
+
+<p>Show container ip addresses</p>
+
+<h5>
+<a id="capitan-logs" class="anchor" href="#capitan-logs" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan logs</code>
+</h5>
+
+<p>Follow container logs</p>
+
+<h5>
+<a id="capitan-pull" class="anchor" href="#capitan-pull" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan pull</code>
+</h5>
+
+<p>Pull images for all containers</p>
+
+<h5>
+<a id="capitan-build" class="anchor" href="#capitan-build" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>capitan build</code>
+</h5>
+
+<p>Build any containers with 'build' flag set (WIP)</p>
+
+<h2>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Configuration</h2>
+
+<h3>
+<a id="global-options" class="anchor" href="#global-options" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Global options</h3>
 
 <pre><code> --cmd, -c "./capitan.cfg.sh"   command used to obtain config
  --debug, -d                    print extra log messages
@@ -153,7 +203,7 @@ This means it will basically work with all versions of docker.</p>
 </code></pre>
 
 <h3>
-<a id="config-fileoutput" class="anchor" href="#config-fileoutput" aria-hidden="true"><span class="octicon octicon-link"></span></a>Config file/output</h3>
+<a id="config-fileoutput" class="anchor" href="#config-fileoutput" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Config file/output</h3>
 
 <p>Service config is read from stdout of the command defined with <code>--cmd</code> .</p>
 
@@ -169,13 +219,13 @@ This means it will basically work with all versions of docker.</p>
 <p>All commands are passed through to docker cli as <code>--COMMAND</code> EXCEPT the following:</p>
 
 <h4>
-<a id="build" class="anchor" href="#build" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>build</code>
+<a id="build" class="anchor" href="#build" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>build</code>
 </h4>
 
 <p>This allows a path to be given for a dockerfile.</p>
 
 <h4>
-<a id="hook" class="anchor" href="#hook" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>hook</code>
+<a id="hook" class="anchor" href="#hook" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>hook</code>
 </h4>
 
 <p>Allows for a custom shell command to be evaluated at the following points:</p>
@@ -216,19 +266,106 @@ This means it will basically work with all versions of docker.</p>
 <p><em>NOTE</em> hooks do not conform exactly to each command. Example: an <code>up</code> command may <code>rm</code> and then <code>run</code> a container OR just <code>start</code> a stopped container.</p>
 
 <h4>
-<a id="global-project" class="anchor" href="#global-project" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>global project</code>
+<a id="scale" class="anchor" href="#scale" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>scale</code>
+</h4>
+
+<p>Number of instances of the container to run. Default is 1.</p>
+
+<p>NOTE: this is untested with links ( I don't use links )</p>
+
+<h4>
+<a id="link" class="anchor" href="#link" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>link</code>
+</h4>
+
+<p>An attempt to resolve a link to the first instance of a container is made. Otherwise the unresolved name is used.</p>
+
+<p>WARNING: When scaling, if the link resolves to a container defined in capitan's config, it will always resolve to the first instance.
+For example: <code>app link mycontainer:some-alias</code> will always resolve to <code>&lt;project&gt;_mycontainer_1</code></p>
+
+<h4>
+<a id="volumes-from" class="anchor" href="#volumes-from" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>volumes-from</code>
+</h4>
+
+<p>An attempt to resolve a volume-from arg to the first instance of a container is made. Otherwise the unresolved name is used.</p>
+
+<p>WARNING: When scaling, if the container name resolves to a container defined in capitan's config, it will always resolve to the first instance.
+For example: <code>app volumes-from mycontainer</code> will always resolve to <code>&lt;project&gt;_mycontainer_1</code></p>
+
+<h4>
+<a id="global-project" class="anchor" href="#global-project" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>global project</code>
 </h4>
 
 <p>The project name, defaults to current working directory</p>
 
 <h4>
-<a id="global-project_sep" class="anchor" href="#global-project_sep" aria-hidden="true"><span class="octicon octicon-link"></span></a><code>global project_sep</code>
+<a id="global-project_sep" class="anchor" href="#global-project_sep" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>global project_sep</code>
 </h4>
 
 <p>String to use to create container name from <code>project</code> and name specified in config</p>
 
 <h3>
-<a id="example-config-" class="anchor" href="#example-config-" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example Config :</h3>
+<a id="environment-variables" class="anchor" href="#environment-variables" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Environment Variables</h3>
+
+<p>The following environment variables are available when creating the containers and when running hooks</p>
+
+<pre><code># container name
+CAPITAN_CONTAINER_NAME
+# container type 
+CAPITAN_CONTAINER_SERVICE_TYPE
+# instance of this type,eg if you have scale = 5 then each container will have their own instance number from 1 -&gt; 5
+CAPITAN_CONTAINER_INSTANCE_NUMBER
+# the project name
+CAPITAN_PROJECT_NAME
+</code></pre>
+
+<p>The following environment variables are only available to hook scripts</p>
+
+<pre><code>CAPITAN_HOOK_NAME
+</code></pre>
+
+<p>For example, following <code>capitan.cfg.sh</code></p>
+
+<pre><code>#!/bin/bash
+
+cat &lt;&lt;EOF
+global project test
+
+mysql name mymysql
+mysql label containerName=\$CAPITAN_CONTAINER_NAME
+mysql label containerServiceName=\$CAPITAN_CONTAINER_SERVICE_NAME
+mysql label containerInstanceNumber=\$CAPITAN_CONTAINER_INSTANCE_NUMBER
+mysql label projectName=\$CAPITAN_PROJECT_NAME
+mysql hook after.run echo "hook: \$CAPITAN_HOOK_NAME: ran \$CAPITAN_CONTAINER_NAME in project \$CAPITAN_PROJECT_NAME"
+EOF
+</code></pre>
+
+<p>Would result in the following run command:</p>
+
+<pre><code>docker run -d --name test_mysql_1 
+    --label containerName=test_mysql_1 
+    --label containerServiceName=mysql
+    --label containerInstanceNumber=1
+    --label projectName=test
+</code></pre>
+
+<p>And the following hook ouput</p>
+
+<pre><code>Running test_mysql_1
+34e7fffb937c3154c2a963ee605c7958404aa5d80519db4ef3d2a80a06974021
+hook: after.run: ran test_mysql_1 in project test
+</code></pre>
+
+<p>Note that the <code>$</code> must be escaped if using HEREDOC or double quotes in bash.</p>
+
+<h3>
+<a id="example-config" class="anchor" href="#example-config" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Example Config</h3>
+
+<p>Check out <a href="https://github.com/byrnedo/dev-stack">dev-stack</a> for an example. 
+Clone it and just run <code>capitan --dry up</code>.</p>
+
+<p>Or check out the <code>./example</code> dir.</p>
+
+<p>Also, here's something to whet your appetite:</p>
 
 <pre><code>#!/bin/bash
 PREFIX=dev
@@ -240,8 +377,8 @@ cat &lt;&lt;EOF
 redis image redis:latest
 redis hostname ${PREFIX}_redis
 redis publish 6379
-redis hook after.run sleep 10
-redis hook after.start sleep 10
+redis hook after.run echo "look everyone, I ran \$CAPITAN_CONTAINER_NAME" &amp;&amp; sleep 3
+redis hook after.start sleep 3
 
 #
 # General mongodb container
@@ -262,11 +399,10 @@ EOF
 </code></pre>
 
 <h2>
-<a id="roadmap" class="anchor" href="#roadmap" aria-hidden="true"><span class="octicon octicon-link"></span></a>Roadmap</h2>
+<a id="roadmap" class="anchor" href="#roadmap" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Roadmap</h2>
 
 <ol>
 <li>Tests</li>
-<li>Scaling (multiple instances of same container)</li>
 <li>More efficient <code>up</code> logic</li>
 <li>Helpful aliases in shell env.</li>
 <li>More flexible <code>build</code> command</li>
