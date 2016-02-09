@@ -59,7 +59,7 @@ const (
 
 type Hook struct {
 	Scripts []string
-	Ses *ShellSession
+	Ses     *ShellSession
 }
 
 type Hooks map[string]*Hook
@@ -67,15 +67,14 @@ type Hooks map[string]*Hook
 // Runs a hook command if it exists for a specific container
 func (h Hooks) Run(hookName string, ctr *Container) error {
 	var (
-		hook *Hook
-		found      bool
-		err 		error
+		hook  *Hook
+		found bool
+		err   error
 	)
 
 	if hook, found = h[hookName]; !found {
 		return nil
 	}
-
 
 	for _, script := range hook.Scripts {
 		hook.Ses = NewContainerShellSession(ctr)
@@ -109,6 +108,8 @@ type Container struct {
 	Image string
 	// if supplied will do docker build on this path
 	Build string
+	// The arguments for the build command
+	BuildArgs []string
 	// command for container
 	Command []string
 	// links
@@ -129,7 +130,6 @@ type Container struct {
 	ProjectNameSeparator string
 	// the number of this container, relates to scale
 	InstanceNumber int
-
 	// Rm command given, therefore dont run as daemon
 	Remove bool
 }
@@ -139,7 +139,14 @@ func (set *Container) BuildImage() error {
 	if err := set.Hooks.Run("before.build", set); err != nil {
 		return err
 	}
-	if _, err := helpers.RunCmd("build", "--tag", set.Image, set.Build); err != nil {
+
+	args := append([]interface{}{
+		"build",
+	}, helpers.ToInterfaceSlice(set.BuildArgs)...)
+
+	args = append(args, "--tag", set.Image, set.Build)
+
+	if _, err := helpers.RunCmd(args...); err != nil {
 		return err
 	}
 	if err := set.Hooks.Run("after.build", set); err != nil {
@@ -158,12 +165,12 @@ func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) err
 	beforeStart := time.Now()
 
 	initialArgs := []interface{}{
-			"run",
-			"-a", "stdout",
-			"-a", "stderr",
-			"-a", "stdin",
-			"--sig-proxy=false",
-		}
+		"run",
+		"-a", "stdout",
+		"-a", "stderr",
+		"-a", "stdin",
+		"--sig-proxy=false",
+	}
 
 	if set.Remove {
 		initialArgs = append(initialArgs, "--rm")
@@ -258,18 +265,14 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	labels := createCapitanContainerLabels(set, cmd)
 	cmd = append(labels, cmd...)
 
-	if attach {
+	if attach || set.Remove {
 
 		if err := set.runInForeground(cmd, wg); err != nil {
 			return err
 		}
 
 	} else {
-		daemonOrRmArg := "-d"
-		if set.Remove {
-			daemonOrRmArg = "--rm"
-		}
-		cmd = append([]interface{}{"run", daemonOrRmArg}, cmd...)
+		cmd = append([]interface{}{"run", "-d"}, cmd...)
 		if err := set.launchDaemonCommand(cmd); err != nil {
 			return err
 		}
@@ -287,7 +290,7 @@ func (set *Container) launchDaemonCommand(cmd []interface{}) error {
 
 	concStr := "docker "
 	for _, arg := range cmd {
-		concStr += fmt.Sprintf("%s",arg) + " "
+		concStr += fmt.Sprintf("%s", arg) + " "
 	}
 	concStr = strings.Trim(concStr, " ")
 
@@ -304,7 +307,7 @@ func (set *Container) startLoggedCommand(cmd []interface{}) (*ShellSession, erro
 
 	concStr := "docker "
 	for _, arg := range cmd {
-		concStr += fmt.Sprintf("%s",arg) + " "
+		concStr += fmt.Sprintf("%s", arg) + " "
 	}
 	concStr = strings.Trim(concStr, " ")
 

@@ -149,6 +149,10 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 			if len(args) > 0 {
 				setting.Build = args
 			}
+		case "build-args":
+			if len(args) > 0 {
+				setting.BuildArgs = str.ToArgv(args)
+			}
 		case "link":
 
 			argParts := strings.SplitN(args, ":", 2)
@@ -190,7 +194,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 		case "global":
 		default:
 			if action != "" {
-				setting.ContainerArgs = append(setting.ContainerArgs, "--" + action)
+				setting.ContainerArgs = append(setting.ContainerArgs, "--"+action)
 				if args != "" {
 					setting.ContainerArgs = append(setting.ContainerArgs, args)
 				}
@@ -303,7 +307,7 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Co
 	for i := 0; i < ctr.Scale; i++ {
 		ctrCopies[i] = new(container.Container)
 		*ctrCopies[i] = *ctr
-		ctrCopies[i].InstanceNumber = i+1
+		ctrCopies[i].InstanceNumber = i + 1
 		ctrCopies[i].Name = fmt.Sprintf("%s%s%d", ctr.Name, ctr.ProjectNameSeparator, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
 

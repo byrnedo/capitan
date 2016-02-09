@@ -42,7 +42,7 @@ var (
 type ProjectConfig struct {
 	ProjectName          string
 	ProjectSeparator     string
-	IsInteractive		 bool
+	IsInteractive        bool
 	ContainerList        SettingsList
 	ContainerCleanupList SettingsList
 }
@@ -189,19 +189,19 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 
 	for _, set := range settings {
 
+		if set.Build != "" {
+			Info.Println("Building image")
+			if err := set.BuildImage(); err != nil {
+				return err
+			}
+		}
+
 		if helpers.GetImageId(set.Image) == "" {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
-			if set.Build != "" {
-				Info.Println("Building image")
-				if err := set.BuildImage(); err != nil {
-					return err
-				}
-			} else {
-				Info.Println("Pulling image")
-				if err := helpers.PullImage(set.Image); err != nil {
-					return err
-				}
+			Info.Println("Pulling image")
+			if err := helpers.PullImage(set.Image); err != nil {
+				return err
 			}
 		}
 
@@ -230,19 +230,19 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 			err error
 		)
 
+		if set.Build != "" {
+			Info.Println("Building image")
+			if err := set.BuildImage(); err != nil {
+				return err
+			}
+		}
+
 		if helpers.GetImageId(set.Image) == "" {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
-			if set.Build != "" {
-				Info.Println("Building image")
-				if err := set.BuildImage(); err != nil {
-					return err
-				}
-			} else {
-				Info.Println("Pulling image")
-				if err := helpers.PullImage(set.Image); err != nil {
-					return err
-				}
+			Info.Println("Pulling image")
+			if err := helpers.PullImage(set.Image); err != nil {
+				return err
 			}
 		}
 
@@ -255,15 +255,15 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 		}
 
 		// disabling as this doesn't work with swarm (how do I know which node to look at??)
-//		if newerImage(set.Name, set.Image) {
-//			// remove and restart
-//			Info.Println("Removing (different image available):", set.Name)
-//			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
-//				return err
-//			}
-//
-//			continue
-//		}
+		//		if newerImage(set.Name, set.Image) {
+		//			// remove and restart
+		//			Info.Println("Removing (different image available):", set.Name)
+		//			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
+		//				return err
+		//			}
+		//
+		//			continue
+		//		}
 
 		if haveArgsChanged(set.Name, set.RunArguments) {
 			// remove and restart
