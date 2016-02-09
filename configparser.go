@@ -165,6 +165,8 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 
 			setting.Links = append(setting.Links, newLink)
 
+		case "rm":
+			setting.Remove = true
 		case "hook":
 			if len(args) > 0 {
 				curHooks := setting.Hooks

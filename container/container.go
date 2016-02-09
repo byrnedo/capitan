@@ -129,6 +129,9 @@ type Container struct {
 	ProjectNameSeparator string
 	// the number of this container, relates to scale
 	InstanceNumber int
+
+	// Rm command given, therefore dont run as daemon
+	Remove bool
 }
 
 // Builds an image for a container
@@ -154,13 +157,19 @@ func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) err
 
 	beforeStart := time.Now()
 
-	cmd = append([]interface{}{
-		"run",
-		"-a", "stdout",
-		"-a", "stderr",
-		"-a", "stdin",
-		"--sig-proxy=false",
-	}, cmd...)
+	initialArgs := []interface{}{
+			"run",
+			"-a", "stdout",
+			"-a", "stderr",
+			"-a", "stdin",
+			"--sig-proxy=false",
+		}
+
+	if set.Remove {
+		initialArgs = append(initialArgs, "--rm")
+	}
+
+	cmd = append(initialArgs, cmd...)
 	if ses, err = set.startLoggedCommand(cmd); err != nil {
 		return err
 	}
@@ -256,7 +265,11 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		}
 
 	} else {
-		cmd = append([]interface{}{"run", "-d"}, cmd...)
+		daemonOrRmArg := "-d"
+		if set.Remove {
+			daemonOrRmArg = "--rm"
+		}
+		cmd = append([]interface{}{"run", daemonOrRmArg}, cmd...)
 		if err := set.launchDaemonCommand(cmd); err != nil {
 			return err
 		}
