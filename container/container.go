@@ -155,7 +155,35 @@ func (set *Container) BuildImage() error {
 	return nil
 }
 
-func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) error {
+func (set *Container) launchWithRmInForeground(cmd []interface{}) error {
+	var (
+		ses *ShellSession
+		err error
+	)
+
+	initialArgs := []interface{}{
+		"run",
+		"-a", "stdout",
+		"-a", "stderr",
+		"-a", "stdin",
+		"--sig-proxy=false",
+		"--rm",
+	}
+
+	cmd = append(initialArgs, cmd...)
+	if ses, err = set.startLoggedCommand(cmd); err != nil {
+		return err
+	}
+
+	err = ses.Wait()
+	if err != nil {
+		return errors.New(set.Name + " exited with error: " + err.Error())
+	}
+
+	return nil
+}
+
+func (set *Container) launchInForeground(cmd []interface{}, wg *sync.WaitGroup) error {
 
 	var (
 		ses *ShellSession
@@ -186,12 +214,13 @@ func (set *Container) runInForeground(cmd []interface{}, wg *sync.WaitGroup) err
 		wg.Done()
 	}(set.Name)
 
-	if !helpers.WasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200*time.Millisecond) {
+
+
+	if !helpers.WasContainerStartedAfterOrRetry(set.Name, beforeStart, 10, 200 * time.Millisecond) {
 		return errors.New(set.Name + " failed to start")
 	}
 
 	Debug.Println("Container deemed to have started after", beforeStart)
-
 	if !helpers.ContainerIsRunning(set.Name) {
 		exitCode := helpers.ContainerExitCode(set.Name)
 		if exitCode != "0" {
@@ -265,12 +294,14 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	labels := createCapitanContainerLabels(set, cmd)
 	cmd = append(labels, cmd...)
 
-	if attach || set.Remove {
-
-		if err := set.runInForeground(cmd, wg); err != nil {
+	if set.Remove {
+		if err := set.launchWithRmInForeground(cmd); err != nil {
 			return err
 		}
-
+	} else if attach {
+		if err := set.launchInForeground(cmd, wg); err != nil {
+			return err
+		}
 	} else {
 		cmd = append([]interface{}{"run", "-d"}, cmd...)
 		if err := set.launchDaemonCommand(cmd); err != nil {
