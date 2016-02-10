@@ -29,7 +29,7 @@ Or using go:
 
 ### Invasive commands
 
-#### `capitan up`
+#### `up`
 Create then run or update containers 
 Recreates if:
 
@@ -42,19 +42,19 @@ Starts stopped containers
     # Optionally can attach to output using `--attach|-a` flag.
     capitan up -a
 
-#### `capitan create`
+#### `create`
 Create but don't run containers
 
     capitan create
     
-#### `capitan start`
+#### `start`
 Start stopped containers
 
     capitan start
     # Optionally can attach to output using `--attach|-a` flag.
     capitan start -a
     
-#### `capitan scale`
+#### `scale`
 Start or stop instances of a container until required amount are running
 
     # run 5 instances of mysql
@@ -62,28 +62,28 @@ Start or stop instances of a container until required amount are running
     
 NOTE: for containers started via this command to be accepted by further commands, the config output must be altered to state the required instances
 
-##### `capitan restart`	
+##### `restart`	
 Restart containers
     
     capitan restart
     # Further arguments passed through to docker, example `capitan start -t 5`
     capitan restart -t 10
 
-##### `capitan stop`	
+##### `stop`	
 Stop running containers
     
     capitan stop
     # Further arguments passed through to docker, example `capitan stop -t 5`
     capitan stop -t 10
     
-##### `capitan kill`	
+##### `kill`	
 Kill running containers using SIGKILL or a specified signal
     
     capitan kill
     # Further arguments passed through to docker, example `capitan kill --signal KILL`
     capitan kill --signal KILL
 
-##### `capitan rm`		
+##### `rm`		
 Remove stopped containers
     
     capitan rm
@@ -92,21 +92,21 @@ Remove stopped containers
     
 ### Non invasive commands
     
-##### `capitan ps`
+##### `ps`
 Show container status
     
     - Further arguments passed through to docker, example `capitan ps -a`
 
-##### `capitan ip`
+##### `ip`
 Show container ip addresses
 
-##### `capitan logs`
+##### `logs`
 Follow container logs
 
-##### `capitan pull`
+##### `pull`
 Pull images for all containers
 
-##### `capitan build`
+##### `build`
 Build any containers with 'build' flag set (WIP)
 
 
@@ -135,7 +135,10 @@ The output format must be:
 All commands are passed through to docker cli as `--COMMAND` EXCEPT the following:
 
 #### `build`
-This allows a path to be given for a dockerfile.
+This allows a path to be given for a dockerfile. Note, it will attempt to build every time. Use `build-args` and pass `--no-cache` to force a full clean build each time.
+
+#### `build-args`
+Any further arguments that need to be passed when building.
 
 #### `hook`
 Allows for a custom shell command to be evaluated at the following points:
