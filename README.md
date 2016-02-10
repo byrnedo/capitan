@@ -167,6 +167,16 @@ An attempt to resolve a link to the first instance of a container is made. Other
 WARNING: When scaling, if the link resolves to a container defined in capitan's config, it will always resolve to the first instance.
 For example: `app link mycontainer:some-alias` will always resolve to `<project>_mycontainer_1`
 
+#### `rm`
+
+By default capitan runs all commands with `-d`. This flag makes capitan run the command with `-rm` instead.
+
+WARNING: This feature is experimental and may result in unexpected failures. A more predictable way is to leverage `docker wait` along with a dynamic label.
+For example:
+
+    mycontainer label $(date +%s)
+    mycontainer hook after.run docker wait \$CAPITAN_CONTAINER_NAME
+
 #### `volumes-from`
 
 An attempt to resolve a volume-from arg to the first instance of a container is made. Otherwise the unresolved name is used.
