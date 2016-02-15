@@ -118,7 +118,7 @@ func (settings *ProjectConfig) LaunchSignalWatcher() {
 				for _, con := range append(settings.ContainerCleanupList, settings.ContainerList...) {
 					for _, hooks := range con.Hooks {
 						if hooks.Ses != nil {
-							Info.Println("killing hook...")
+							Debug.Println("killing hook...")
 							hooks.Ses.Kill(syscall.SIGKILL)
 						}
 					}
