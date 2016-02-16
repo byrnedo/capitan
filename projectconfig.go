@@ -109,7 +109,7 @@ func (settings *ProjectConfig) LaunchSignalWatcher() {
 	}()
 
 	go func() {
-		var calls int
+//		var calls int
 		for {
 			sig := <-signalChannel
 			switch sig {
@@ -123,21 +123,21 @@ func (settings *ProjectConfig) LaunchSignalWatcher() {
 						}
 					}
 				}
-				if settings.IsInteractive {
-					calls++
-					if calls == 1 {
-						go func() {
-							settings.ContainerList.CapitanStop(nil, false)
-							stopDone <- true
-						}()
-					} else if calls == 2 {
-						killBegan <- true
-						settings.ContainerList.CapitanKill(nil, false)
-						killDone <- true
-					}
-				} else {
+//				if settings.IsInteractive {
+//					calls++
+//					if calls == 1 {
+//						go func() {
+//							settings.ContainerList.CapitanStop(nil, false)
+//							stopDone <- true
+//						}()
+//					} else if calls == 2 {
+//						killBegan <- true
+//						settings.ContainerList.CapitanKill(nil, false)
+//						killDone <- true
+//					}
+//				} else {
 					os.Exit(1)
-				}
+//				}
 			default:
 				Debug.Println("Unhandled signal", sig)
 			}
@@ -311,6 +311,7 @@ func (settings SettingsList) CapitanStart(attach bool, dryRun bool) error {
 	sort.Sort(settings)
 	wg := sync.WaitGroup{}
 	for _, set := range settings {
+
 		if helpers.ContainerIsRunning(set.Name) {
 			Info.Println("Already running " + set.Name)
 			if attach {
@@ -339,6 +340,7 @@ func (settings SettingsList) CapitanStart(attach bool, dryRun bool) error {
 func (settings SettingsList) CapitanRestart(args []string, dryRun bool) error {
 	sort.Sort(settings)
 	for _, set := range settings {
+
 		Info.Println("Restarting " + set.Name)
 		if !dryRun {
 			if err := set.Restart(args); err != nil {
