@@ -7,6 +7,16 @@ version=$(git describe --tag)
 
 cd $SCRIPT_PATH/..
 
+for darwin_arch in 386 amd64
+do
+    pkg_arch=$darwin_arch
+    [[ "$pkg_arch" = "386" ]] && pkg_arch=i386
+    pkg_name=capitan_${version}_darwin_$pkg_arch
+    env GOOS=darwin GOARCH=$darwin_arch go build -o build/releases/${pkg_name}/capitan
+    (cd build/releases/${pkg_name} && zip ../../${pkg_name}.zip capitan)
+done
+
+
 for linux_arch in 386 amd64
 do
     deb_arch=$linux_arch
