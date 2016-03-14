@@ -191,8 +191,10 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 
 		if set.Build != "" {
 			Info.Println("Building image")
-			if err := set.BuildImage(); err != nil {
-				return err
+			if ! dryRun {
+				if err := set.BuildImage(); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -200,8 +202,10 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
 			Info.Println("Pulling image")
-			if err := helpers.PullImage(set.Image); err != nil {
-				return err
+			if ! dryRun {
+				if err := helpers.PullImage(set.Image); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -232,8 +236,10 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 
 		if set.Build != "" {
 			Info.Println("Building image")
-			if err := set.BuildImage(); err != nil {
-				return err
+			if ! dryRun {
+				if err := set.BuildImage(); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -241,8 +247,11 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
 			Info.Println("Pulling image")
-			if err := helpers.PullImage(set.Image); err != nil {
-				return err
+
+			if ! dryRun {
+				if err := helpers.PullImage(set.Image); err != nil {
+					return err
+				}
 			}
 		}
 
