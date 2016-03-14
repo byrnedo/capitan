@@ -232,6 +232,38 @@ func (set *Container) launchInForeground(cmd []interface{}, wg *sync.WaitGroup) 
 
 }
 
+func (set *Container) BlueGreenDeploy(attach bool, dryRun bool, wg *sync.WaitGroup) error {
+	// rename the current
+	Warning.Println("Temporarily renaming running container")
+	oldName := set.Name + "_old_" + helpers.RandStringBytesMaskImprSrc(5)
+	if err := helpers.RenameContainer(set.Name, oldName); err != nil {
+		return err
+	}
+
+	var oldC = new(Container)
+	*oldC = *set
+	oldC.Name = oldName
+
+	if err := set.Run(attach, dryRun, wg); err != nil {
+		// put back the old
+		set.Stop(nil)
+
+		Warning.Println("Error running new container, reverting container name")
+		if err := helpers.RenameContainer(oldName, set.Name); err != nil {
+			return err
+		}
+		return err
+	}
+
+	// shutdown the old
+	if err := oldC.Stop(nil); err != nil {
+		Error.Println("Error stopping old container")
+		return err
+	}
+
+	return nil
+}
+
 func (set *Container) RecreateAndRun(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	if !dryRun {
 		set.Rm([]string{"-f"})

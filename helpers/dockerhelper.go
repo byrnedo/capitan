@@ -152,6 +152,13 @@ func GetContainerServiceNameLabel(name string) string {
 	return getLabel(ServiceLabelName, name)
 }
 
+func RenameContainer(currentName string, newName string) error {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	_, err := ses.Command("docker", "rename", currentName, newName).Output()
+	return err
+}
+
 func getLabel(label string, container string) string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard

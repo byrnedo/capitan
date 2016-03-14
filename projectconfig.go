@@ -42,6 +42,7 @@ var (
 type ProjectConfig struct {
 	ProjectName          string
 	ProjectSeparator     string
+	BlueGreenMode	     bool
 	IsInteractive        bool
 	ContainerList        SettingsList
 	ContainerCleanupList SettingsList
@@ -191,8 +192,10 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 
 		if set.Build != "" {
 			Info.Println("Building image")
-			if err := set.BuildImage(); err != nil {
-				return err
+			if ! dryRun {
+				if err := set.BuildImage(); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -200,8 +203,10 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
 			Info.Println("Pulling image")
-			if err := helpers.PullImage(set.Image); err != nil {
-				return err
+			if ! dryRun {
+				if err := helpers.PullImage(set.Image); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -220,7 +225,7 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 // Recreates a container if the container's image has a newer id locally
 // OR if the command used to create the container is now changed (i.e.
 // config has changed.
-func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
+func (settings SettingsList) CapitanUp(attach bool, dryRun bool, blueGreenMode bool) error {
 	sort.Sort(settings)
 
 	wg := sync.WaitGroup{}
@@ -232,8 +237,10 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 
 		if set.Build != "" {
 			Info.Println("Building image")
-			if err := set.BuildImage(); err != nil {
-				return err
+			if ! dryRun {
+				if err := set.BuildImage(); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -241,8 +248,11 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
 			Info.Println("Pulling image")
-			if err := helpers.PullImage(set.Image); err != nil {
-				return err
+
+			if ! dryRun {
+				if err := helpers.PullImage(set.Image); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -267,9 +277,16 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 
 		if haveArgsChanged(set.Name, set.RunArguments) {
 			// remove and restart
-			Info.Println("Removing (run arguments changed):", set.Name)
-			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
-				return err
+			if blueGreenMode {
+				Info.Println("Run arguments changed, doing blue-green redeploy:", set.Name)
+				if err = set.BlueGreenDeploy(attach, dryRun, &wg); err != nil {
+					return err
+				}
+			} else {
+				Info.Println("Removing (run arguments changed):", set.Name)
+				if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
+					return err
+				}
 			}
 			continue
 		}

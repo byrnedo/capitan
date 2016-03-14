@@ -98,6 +98,8 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 					projSettings.ProjectName = string(lineParts[2])
 				case "project_sep":
 					projSettings.ProjectSeparator = stripChars(string(lineParts[2]), " \t")
+				case "blue_green":
+					projSettings.BlueGreenMode, _ = strconv.ParseBool(string(lineParts[2]))
 				}
 			}
 			continue
