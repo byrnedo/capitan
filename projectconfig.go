@@ -17,6 +17,10 @@ import (
 
 const containerShowTemplate = `{{.Name}}:
   Name:  {{.ServiceName}}
+  State:
+    ID: {{.State.ID}}
+    Color: {{.State.Color}}
+    Running: {{.State.Running}}
   Type:  {{.ServiceType}}
   Image: {{.Image}}{{if .Build}}
   Build: {{.Build}}{{end}}
@@ -32,7 +36,6 @@ const containerShowTemplate = `{{.Name}}:
     {{$val}}{{end}}
   Run Args:   {{range $ind, $val := .RunArguments}}
     {{$val}}{{end}}
-
 `
 
 var (
@@ -44,6 +47,7 @@ type ProjectConfig struct {
 	ProjectSeparator     string
 	BlueGreenMode	     bool
 	IsInteractive        bool
+	ContainersState	     []*helpers.ServiceState
 	ContainerList        SettingsList
 	ContainerCleanupList SettingsList
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+"strconv"
 )
 
 var (
@@ -132,6 +133,9 @@ type Container struct {
 	InstanceNumber int
 	// Rm command given, therefore dont run as daemon
 	Remove bool
+
+	// The current state of the container
+	State *helpers.ServiceState
 }
 
 // Builds an image for a container
@@ -283,6 +287,10 @@ func createCapitanContainerLabels(ctr *Container, args []interface{}) []interfac
 		ServiceLabelName + "=" + ctr.ServiceName,
 		"--label",
 		ProjectLabelName + "=" + ctr.ProjectName,
+		"--label",
+		ContainerNumberLabelName + "=" + strconv.Itoa(ctr.InstanceNumber),
+		"--label",
+		ColorLabelName + "=" + ctr.State.Color,
 	}
 }
 

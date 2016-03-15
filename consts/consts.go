@@ -5,4 +5,5 @@ const (
 	ServiceLabelName         = "capitanServiceName"
 	ProjectLabelName         = "capitanProjectName"
 	ContainerNumberLabelName = "capitanContainerNumber"
+	ColorLabelName		 = "capitanDeployColor"
 )

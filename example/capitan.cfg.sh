@@ -4,6 +4,7 @@ PREFIX=dev
 cat <<EOF
 # Set project name to 'capitan'
 global project capitan
+global blue_green true
 
 # --------------------------------------------------
 # General redis container

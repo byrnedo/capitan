@@ -206,14 +206,18 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 		cmdsMap[contr] = setting
 	}
 
+	var containersState map[string]*helpers.ServiceState
+	if containersState, err = helpers.GetProjectState(projSettings.ProjectName, projSettings.ProjectSeparator); err != nil {
+		return
+	}
 	// Post process
-	err = f.postProcessConfig(cmdsMap, projSettings)
+	err = f.postProcessConfig(cmdsMap, projSettings, containersState)
 	return
 
 }
 
 // Now that we have all settings do some house keeping and processing
-func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Container, projSettings *ProjectConfig) error {
+func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Container, projSettings *ProjectConfig, state map[string]*helpers.ServiceState) error {
 
 	// TODO duplicate containers for scaling
 	projSettings.ContainerList = make(SettingsList, 0)
@@ -239,10 +243,12 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 		// resolve volumes from
 		f.processVolumesFrom(parsedConfig, &item)
 
-		ctrsToAdd := f.scaleContainers(&item)
+		ctrsToAdd := f.scaleContainers(&item, state)
+
 
 		projSettings.ContainerList = append(projSettings.ContainerList, ctrsToAdd...)
 	}
+
 
 	return nil
 }
@@ -287,8 +293,7 @@ func (f *ConfigParser) processScaleArg(ctr *container.Container) {
 // Create list of containers to cleanup when scaling
 func (f *ConfigParser) processCleanupTasks(projSettings *ProjectConfig, ctr *container.Container) {
 	var tasks SettingsList
-	svcs := helpers.InstancesOfService(ctr.Name)
-	for _, existing := range svcs {
+	for _, existing := range projSettings.ContainersState {
 		instNum, err := helpers.GetNumericSuffix(existing.Name, ctr.ProjectNameSeparator)
 		if err != nil || instNum < 0 || instNum > ctr.Scale {
 			tempCtr := new(container.Container)
@@ -302,7 +307,7 @@ func (f *ConfigParser) processCleanupTasks(projSettings *ProjectConfig, ctr *con
 }
 
 // Create copies of containers which need to scale
-func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Container {
+func (f *ConfigParser) scaleContainers(ctr *container.Container, state map[string]*helpers.ServiceState) []*container.Container {
 
 	ctrCopies := make([]*container.Container, ctr.Scale)
 
@@ -319,6 +324,13 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container) []*container.Co
 		}
 
 		ctrCopies[i].RunArguments = ctrCopies[i].GetRunArguments()
+		var found bool
+		if ctrCopies[i].State, found = state[ctrCopies[i].ServiceName + ctrCopies[i].ProjectNameSeparator + strconv.Itoa(ctrCopies[i].InstanceNumber)]; !found {
+			ctrCopies[i].State = &helpers.ServiceState{
+				Running: false,
+				Color: "blue",
+			}
+		}
 	}
 
 	return ctrCopies
