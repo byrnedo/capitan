@@ -513,14 +513,14 @@ func (set *Container) Restart(args []string) error {
 
 // Returns a containers IP
 // TODO needs to respect scale
-func (set *Container) IP() string {
+func (set *Container) IPs() string {
 	ses := sh.NewSession()
 	ses.Stderr = ioutil.Discard
-	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{.NetworkSettings.IPAddress}}", set.Name).Output()
+	out, err := ses.Command("docker", "inspect", "--type", "container", "--format", "{{range $i, $p := .NetworkSettings.Networks}}{{$p.IPAddress}}@{{$i}},{{end}}", set.Name).Output()
 	if err != nil {
 		return ""
 	}
-	ip := strings.Trim(string(out), " \n")
+	ip := strings.Trim(string(out), ",\n")
 	return ip
 }
 

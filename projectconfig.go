@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 	"text/template"
+"strconv"
 )
 
 const containerShowTemplate = `{{.Name}}:
@@ -376,9 +377,10 @@ func (settings SettingsList) CapitanRestart(args []string, dryRun bool) error {
 // Print all container IPs
 func (settings SettingsList) CapitanIP() error {
 	sort.Sort(settings)
+	width := strconv.Itoa(LongestContainerName)
 	for _, set := range settings {
-		ip := set.IP()
-		Info.Printf("%s: %s", set.Name, ip)
+		ip := set.IPs()
+		Info.Printf("%-"+width+"s: %s", set.Name, ip)
 	}
 	return nil
 }
