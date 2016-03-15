@@ -8,6 +8,7 @@ Capitan is only a wrapper around the docker cli tool, no api usage whatsoever (w
 This means it will basically work with all versions of docker.
 
     $ capitan up
+
     Run arguments changed, doing blue-green redeploy: capitan_redis_green_1
     Running capitan_redis_blue_1
     cd939956f332391489d0383610d9da2c420595d495934c3221376dbf68854316
