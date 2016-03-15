@@ -1,3 +1,2 @@
 package main
-
-const VERSION = "0.17-SNAPSHOT"
+const VERSION = "0.17"
