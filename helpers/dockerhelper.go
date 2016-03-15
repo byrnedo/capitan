@@ -178,6 +178,7 @@ type ServiceState struct {
 	InstanceNum int
 	Color string
 	Running bool
+	ArgsHash string
 }
 
 func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceState, err error) {
@@ -187,7 +188,7 @@ func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceS
 		"-af",
 		fmt.Sprintf("label=%s=%s", ProjectLabelName, projName),
 		"--format",
-		fmt.Sprintf(`{{.ID}}\t{{.Names}}\t{{.Label "%s"}}\t{{.Label "%s"}}\t{{.Label "%s"}}\t{{.Status}}`, ColorLabelName, ServiceLabelName, ContainerNumberLabelName)).Output()
+		fmt.Sprintf(`{{.ID}}\t{{.Names}}\t{{.Label "%s"}}\t{{.Label "%s"}}\t{{.Label "%s"}}\t{{.Status}}\t{{.Label "%s"}}`, ColorLabelName, ServiceLabelName, ContainerNumberLabelName, UniqueLabelName)).Output()
 	if err != nil {
 		return
 	}
@@ -197,16 +198,19 @@ func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceS
 
 	out = bytes.Trim(out, "\n")
 
+	Debug.Println(string(out))
+
 	svcs = make(map[string]*ServiceState, 0)
 	for _, line := range bytes.Split(out, []byte{'\n'}) {
 		lineParts := bytes.Split(line, []byte{'\t'})
 
-		id := string(lineParts[0])
-		names := string(lineParts[1])
-
 		if len(lineParts) < 2 {
 			continue
 		}
+
+		id := string(lineParts[0])
+		names := string(lineParts[1])
+
 		var color string
 		if len(lineParts) > 2 {
 			color = string(lineParts[2])
@@ -236,6 +240,12 @@ func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceS
 				running = true
 			}
 		}
+
+		var argsHash string
+		if len(lineParts) > 6 {
+			argsHash = string(lineParts[6])
+		}
+
 		name := filepath.Base(names)
 		svcs[serviceName + projSep + strconv.Itoa(instanceNum)] = &ServiceState{
 			ID: id,
@@ -244,6 +254,7 @@ func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceS
 			InstanceNum: instanceNum,
 			Color: color,
 			Running: running,
+			ArgsHash : argsHash,
 		}
 	}
 	return

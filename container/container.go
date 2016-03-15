@@ -282,7 +282,7 @@ func (set *Container) RecreateAndRun(attach bool, dryRun bool, wg *sync.WaitGrou
 func createCapitanContainerLabels(ctr *Container, args []interface{}) []interface{} {
 	return []interface{}{
 		"--label",
-		UniqueLabelName + "=" + fmt.Sprintf("'%s'", args),
+		UniqueLabelName + "=" + helpers.HashInterfaceSlice(args),
 		"--label",
 		ServiceLabelName + "=" + ctr.ServiceName,
 		"--label",
@@ -440,7 +440,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 		err error
 	)
 	set.Action = Start
-	if helpers.ContainerIsRunning(set.Name) {
+	if set.State.Running {
 		Info.Println("Already running", set.Name)
 		if attach {
 			if err = set.Attach(wg); err != nil {

@@ -21,6 +21,7 @@ const containerShowTemplate = `{{.Name}}:
     ID: {{.State.ID}}
     Color: {{.State.Color}}
     Running: {{.State.Running}}
+    Hash: {{.State.ArgsHash}}
   Type:  {{.ServiceType}}
   Image: {{.Image}}{{if .Build}}
   Build: {{.Build}}{{end}}
@@ -163,7 +164,7 @@ func newerImage(container string, image string) bool {
 
 func haveArgsChanged(container string, runArgs []interface{}) bool {
 
-	uniqueLabel := fmt.Sprintf("%s", runArgs)
+	uniqueLabel := helpers.HashInterfaceSlice(runArgs)
 	if helpers.GetContainerUniqueLabel(container) != uniqueLabel {
 		return true
 	}
@@ -296,7 +297,7 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool, blueGreenMode b
 		}
 
 		//attach if running
-		if helpers.ContainerIsRunning(set.Name) {
+		if set.State.Running {
 			Info.Println("Already running " + set.Name)
 			if attach {
 				Info.Println("Attaching")

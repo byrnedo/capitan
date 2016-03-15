@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
+	"crypto/md5"
 )
 
 var src = rand.NewSource(time.Now().UnixNano())
@@ -39,4 +41,8 @@ func GetNumericSuffix(name string, sep string) (int, error) {
 	namePts := strings.Split(name, sep)
 	instNumStr := namePts[len(namePts)-1]
 	return strconv.Atoi(instNumStr)
+}
+
+func HashInterfaceSlice(args []interface{}) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("'%s'", args))))
 }
