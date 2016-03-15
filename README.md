@@ -15,8 +15,15 @@ This means it will basically work with all versions of docker.
     Already running capitan_mongo_blue_1
     Already running capitan_nats_blue_1
     Already running capitan_app_blue_1
-    Already running capitan_app_blue_2
-    Already running capitan_app_blue_3
+
+## Features
+
+1. Shell Support - Config is read from stdout of a shell command. Extremely flexible.
+2. Hooks - hooks for before and after every intrusive action.
+3. Predictable run sequence - containers started in order defined.
+4. [Blue/Green](https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html) deployment - option to only remove original container if new container starts and passes hook commands.
+5. Future proof - options are passed through on most commands to docker cli, very simple.
+
 
 ## Installation
 
@@ -25,14 +32,6 @@ Head over to the [releases](https://github.com/byrnedo/capitan/releases) page to
 Or using go:
 
     go get github.com/byrnedo/capitan
-
-## Capitan Features
-
-1. Shell Support - Config is read from stdout of a shell command. Extremely flexible.
-2. Hooks - hooks for before and after every intrusive action.
-3. Predictable run sequence - containers started in order defined.
-4. [Blue/Green](https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html) deployment - option to only remove original container if new container starts and passes hook commands.
-5. Future proof - options are passed through on most commands to docker cli, very simple.
 
 ## Commands
 
