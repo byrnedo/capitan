@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"fmt"
+	"strconv"
 )
 
 var (
@@ -15,6 +17,7 @@ var (
 	//logFormat int = log.Ldate | log.Ltime | log.Lshortfile
 	logFormat int = 0
 	level         = InfoLevel
+	LongestContainerName int
 )
 
 type LogLevel int
@@ -47,6 +50,12 @@ func init() {
 
 func GetLevel() LogLevel {
 	return level
+}
+
+func ContainerInfoLog(name string, msgs ...interface{}) {
+	var lenStr = strconv.Itoa(LongestContainerName)
+	var strs = []interface{}{fmt.Sprintf("%-"+lenStr+"s:", name)}
+	Info.Println(append(strs, msgs...)...)
 }
 
 func SetDebug() {

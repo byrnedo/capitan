@@ -280,7 +280,7 @@ func (set *Container) BlueGreenDeploy(attach bool, dryRun bool, wg *sync.WaitGro
 	}
 
 	// shutdown the old
-	Info.Println("Removing old container "+set.Name+"...")
+	ContainerInfoLog(newCon.Name, "Removing old container "+set.Name+"...")
 	if ! dryRun {
 		if err := set.Rm([]string{"-f"}); err != nil {
 			Error.Println("Error stopping old container")
@@ -323,7 +323,7 @@ func createCapitanContainerLabels(ctr *Container, args []interface{}) []interfac
 func (set *Container) Create(dryRun bool) error {
 	set.Action = Run
 
-	Info.Println("Creating " + set.Name)
+	ContainerInfoLog(set.Name, "Creating...")
 	if dryRun {
 		return nil
 	}
@@ -347,7 +347,7 @@ func (set *Container) Create(dryRun bool) error {
 func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 	set.Action = Run
 
-	Info.Println("Running " + set.Name)
+	ContainerInfoLog(set.Name,"Running...")
 	if dryRun {
 		return nil
 	}
@@ -466,7 +466,7 @@ func (set *Container) Start(attach bool, wg *sync.WaitGroup) error {
 	)
 	set.Action = Start
 	if set.State.Running {
-		Info.Println("Already running", set.Name)
+		ContainerInfoLog(set.Name, "Already running.")
 		if attach {
 			if err = set.Attach(wg); err != nil {
 				return err

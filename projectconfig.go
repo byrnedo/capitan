@@ -13,7 +13,6 @@ import (
 	"sync"
 	"syscall"
 	"text/template"
-"strconv"
 )
 
 const containerShowTemplate = `{{.Name}}:
@@ -197,7 +196,7 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 	for _, set := range settings {
 
 		if set.Build != "" {
-			Info.Println("Building image")
+			ContainerInfoLog(set.Name, "Building image...")
 			if ! dryRun {
 				if err := set.BuildImage(); err != nil {
 					return err
@@ -208,7 +207,7 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 		if helpers.GetImageId(set.Image) == "" {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
-			Info.Println("Pulling image")
+			ContainerInfoLog(set.Name, "Pulling image...")
 			if ! dryRun {
 				if err := helpers.PullImage(set.Image); err != nil {
 					return err
@@ -242,7 +241,7 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 		)
 
 		if set.Build != "" {
-			Info.Println("Building image")
+			ContainerInfoLog(set.Name, "Building image...")
 			if ! dryRun {
 				if err := set.BuildImage(); err != nil {
 					return err
@@ -253,7 +252,7 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 		if helpers.GetImageId(set.Image) == "" {
 			Warning.Printf("Capitan was unable to find image %s locally\n", set.Image)
 
-			Info.Println("Pulling image")
+			ContainerInfoLog(set.Name, "Pulling image...")
 
 			if ! dryRun {
 				if err := helpers.PullImage(set.Image); err != nil {
@@ -284,12 +283,12 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 		if haveArgsChanged(set.Name, set.GetRunArguments()) {
 			// remove and restart
 			if set.BlueGreenMode == container.BGModeOn {
-				Info.Println("Run arguments changed, doing blue-green redeploy:", set.Name)
+				ContainerInfoLog(set.Name, "Run arguments changed, doing blue-green redeploy...")
 				if err = set.BlueGreenDeploy(attach, dryRun, &wg); err != nil {
 					return err
 				}
 			} else {
-				Info.Println("Removing (run arguments changed):", set.Name)
+				ContainerInfoLog(set.Name, "Removing (run arguments changed)")
 				if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
 					return err
 				}
@@ -299,9 +298,9 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 
 		//attach if running
 		if set.State.Running {
-			Info.Println("Already running " + set.Name)
+			ContainerInfoLog(set.Name, "Already running.")
 			if attach {
-				Info.Println("Attaching")
+				ContainerInfoLog(set.Name, "Attaching")
 				if err := set.Attach(&wg); err != nil {
 					return err
 				}
@@ -309,7 +308,7 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 			continue
 		}
 
-		Info.Println("Starting " + set.Name)
+		ContainerInfoLog(set.Name, "Starting...")
 
 		if dryRun {
 			continue
@@ -336,16 +335,16 @@ func (settings SettingsList) CapitanStart(attach bool, dryRun bool) error {
 	for _, set := range settings {
 
 		if set.State.Running {
-			Info.Println("Already running " + set.Name)
+			ContainerInfoLog(set.Name, "Already running")
 			if attach {
-				Info.Println("Attaching")
+				ContainerInfoLog(set.Name, "Attaching...")
 				if err := set.Attach(&wg); err != nil {
 					return err
 				}
 			}
 			continue
 		}
-		Info.Println("Starting " + set.Name)
+		ContainerInfoLog(set.Name, "Starting")
 		if !dryRun {
 			if err := set.Start(attach, &wg); err != nil {
 				return err
@@ -364,7 +363,7 @@ func (settings SettingsList) CapitanRestart(args []string, dryRun bool) error {
 	sort.Sort(settings)
 	for _, set := range settings {
 
-		Info.Println("Restarting " + set.Name)
+		ContainerInfoLog(set.Name, "Restarting")
 		if !dryRun {
 			if err := set.Restart(args); err != nil {
 				return err
@@ -377,10 +376,9 @@ func (settings SettingsList) CapitanRestart(args []string, dryRun bool) error {
 // Print all container IPs
 func (settings SettingsList) CapitanIP() error {
 	sort.Sort(settings)
-	width := strconv.Itoa(LongestContainerName)
 	for _, set := range settings {
-		ip := set.IPs()
-		Info.Printf("%-"+width+"s: %s", set.Name, ip)
+		ips := set.IPs()
+		ContainerInfoLog(set.Name, ips)
 	}
 	return nil
 }
@@ -436,10 +434,10 @@ func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
 		if !set.State.Running {
-			Info.Println("Already stopped", set.Name)
+			ContainerInfoLog(set.Name, "Already stopped")
 			continue
 		}
-		Info.Println("Killing " + set.Name)
+		ContainerInfoLog(set.Name, "Killing...")
 		if !dryRun {
 			if err := set.Kill(args); err != nil {
 				return err
@@ -454,10 +452,10 @@ func (settings SettingsList) CapitanStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
 		if !set.State.Running {
-			Info.Println("Already stopped", set.Name)
+			ContainerInfoLog(set.Name, "Already stopped.")
 			continue
 		}
-		Info.Println("Stopping " + set.Name)
+		ContainerInfoLog(set.Name, "Stopping...")
 		if !dryRun {
 			if err := set.Stop(args); err != nil {
 				return err
@@ -473,7 +471,7 @@ func (settings SettingsList) CapitanRm(args []string, dryRun bool) error {
 	for _, set := range settings {
 
 		if helpers.ContainerExists(set.Name) {
-			Info.Println("Removing " + set.Name)
+			ContainerInfoLog(set.Name, "Removing....")
 			if dryRun {
 				continue
 			}
@@ -481,7 +479,7 @@ func (settings SettingsList) CapitanRm(args []string, dryRun bool) error {
 				return err
 			}
 		} else {
-			Info.Println("Container doesn't exist:", set.Name)
+			ContainerInfoLog(set.Name, "Container doesn't exist")
 		}
 	}
 	return nil
@@ -494,7 +492,7 @@ func (settings SettingsList) CapitanBuild(dryRun bool) error {
 		if len(set.Build) == 0 {
 			continue
 		}
-		Info.Println("Building " + set.Name)
+		ContainerInfoLog(set.Name, "Building...")
 		if !dryRun {
 			if err := set.BuildImage(); err != nil {
 				return err
@@ -512,7 +510,7 @@ func (settings SettingsList) CapitanPull(dryRun bool) error {
 		if len(set.Build) > 0 || set.Image == "" {
 			continue
 		}
-		Info.Println("Pulling", set.Image, "for", set.Name)
+		ContainerInfoLog(set.Name, "Pulling ", set.Image, "...")
 		if !dryRun {
 			if err := helpers.PullImage(set.Image); err != nil {
 				return err

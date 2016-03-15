@@ -16,7 +16,6 @@ type ContainerLogWriter struct {
 
 var (
 	resetCode            = []byte(ansi.ColorCode("reset"))
-	LongestContainerName int
 )
 
 func NewContainerLogWriter(out io.Writer, containerName string, color string) *ContainerLogWriter {
