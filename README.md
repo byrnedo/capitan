@@ -19,11 +19,14 @@ This means it will basically work with all versions of docker.
 
 ## Features
 
-1. Shell Support - Config is read from stdout of a shell command. Extremely flexible.
-2. Hooks - hooks for before and after every intrusive action.
-3. Predictable run sequence - containers started in order defined.
-4. [Blue/Green](https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html) deployment - option to only remove original container if new container starts and passes hook commands.
-5. Future proof - options are passed through on most commands to docker cli, very simple.
+- Provides commands which operate on collection of containers.
+- Uses predefined description of containers from readable configuration file.
+- Can use any docker run option that is provided by your docker version.
+- The order of starting containers is defined in configuration file.
+- The order of stopping containers is the reverse of the order of starting.
+- Easy to install, compiled static go binaries available for linux, and mac. It doesn't require any execution environment or other libraries.
+- Allows the use of bash as hooks for many capitan commands.
+- [Blue/Green](https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html) deployment - option to only remove original container when starting new version of same container if it starts and passes hook commands.
 
 
 ## Installation
