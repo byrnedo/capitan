@@ -334,7 +334,7 @@ func (settings SettingsList) CapitanStart(attach bool, dryRun bool) error {
 	wg := sync.WaitGroup{}
 	for _, set := range settings {
 
-		if helpers.ContainerIsRunning(set.Name) {
+		if set.State.Running {
 			Info.Println("Already running " + set.Name)
 			if attach {
 				Info.Println("Attaching")
@@ -433,7 +433,7 @@ func (settings SettingsList) CapitanStats() error {
 func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
-		if !helpers.ContainerIsRunning(set.Name) {
+		if !set.State.Running {
 			Info.Println("Already stopped", set.Name)
 			continue
 		}
@@ -451,7 +451,7 @@ func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
 func (settings SettingsList) CapitanStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
-		if !helpers.ContainerIsRunning(set.Name) {
+		if !set.State.Running {
 			Info.Println("Already stopped", set.Name)
 			continue
 		}

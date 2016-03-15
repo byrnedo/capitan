@@ -315,7 +315,17 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container, state map[strin
 		ctrCopies[i] = new(container.Container)
 		*ctrCopies[i] = *ctr
 		ctrCopies[i].InstanceNumber = i + 1
-		ctrCopies[i].Name = fmt.Sprintf("%s%s%d", ctr.Name, ctr.ProjectNameSeparator, i+1)
+
+		var found bool
+		var lookup = ctr.Name + ctr.ProjectNameSeparator + strconv.Itoa(ctrCopies[i].InstanceNumber)
+		if ctrCopies[i].State, found = state[lookup]; !found {
+			ctrCopies[i].State = &helpers.ServiceState{
+				Running: false,
+				Color: "blue",
+			}
+		}
+
+		ctrCopies[i].Name = fmt.Sprintf("%s%s%s%s%d", ctr.Name, ctr.ProjectNameSeparator, ctrCopies[i].State.Color, ctr.ProjectNameSeparator, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
 
 		// HACK for container logging prefix width alignment, eg 'some_container | blahbla'
@@ -324,13 +334,6 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container, state map[strin
 		}
 
 		ctrCopies[i].RunArguments = ctrCopies[i].GetRunArguments()
-		var found bool
-		if ctrCopies[i].State, found = state[ctrCopies[i].ServiceName + ctrCopies[i].ProjectNameSeparator + strconv.Itoa(ctrCopies[i].InstanceNumber)]; !found {
-			ctrCopies[i].State = &helpers.ServiceState{
-				Running: false,
-				Color: "blue",
-			}
-		}
 	}
 
 	return ctrCopies

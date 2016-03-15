@@ -4,7 +4,7 @@ PREFIX=dev
 cat <<EOF
 # Set project name to 'capitan'
 global project capitan
-global blue_green false
+global blue_green true
 
 # --------------------------------------------------
 # General redis container
@@ -43,19 +43,11 @@ nats scale 1
 #
 # Builds dockerfile locate at ./ and tags it as 'capitan_app', container will then use this image
 
-app build ./
+app build ../
 app hostname ${PREFIX}_app
 
 # run 3 instances
 app scale 3
 
-# 'mongo' will resolve to capitan_mongo_1
-app link mongo:mgo
-
-# 'nats' will resolve to capitan_nats_1
-app volumes-from nats
-
-# or if you want to be explicit ( or reference an external container )
-app volumes-from capitan_nats_1
 
 EOF
