@@ -280,7 +280,7 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool, blueGreenMode b
 		//			continue
 		//		}
 
-		if haveArgsChanged(set.Name, set.RunArguments) {
+		if haveArgsChanged(set.Name, set.GetRunArguments()) {
 			// remove and restart
 			if blueGreenMode {
 				Info.Println("Run arguments changed, doing blue-green redeploy:", set.Name)

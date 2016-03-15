@@ -11,10 +11,10 @@ global blue_green true
 # --------------------------------------------------
 #
 redis image redis:latest
-redis hostname ${PREFIX}_redis
+redis hostname ${PREFIX}_rediss
 
 # sleep one second after 'run' command
-redis hook after.run echo "instance \$CAPITAN_CONTAINER_INSTANCE_NUMBER" && sleep 1
+redis hook after.run sleep 3
 
 # sleep one second after 'start' command
 redis hook after.start sleep 1

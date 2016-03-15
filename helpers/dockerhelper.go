@@ -234,9 +234,9 @@ func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceS
 			}
 		}
 
-		var running bool
+		var running = false
 		if len(lineParts) > 5 {
-			if bytes.HasPrefix(lineParts[5], []byte("Up")){
+			if bytes.HasPrefix(bytes.TrimSpace(lineParts[5]), []byte("Up")){
 				running = true
 			}
 		}

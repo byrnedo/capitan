@@ -138,6 +138,10 @@ type Container struct {
 	State *helpers.ServiceState
 }
 
+func (set *Container) NewName() {
+	set.Name = fmt.Sprintf("%s%s%s%s%d", set.ServiceName, set.ProjectNameSeparator, set.State.Color, set.ProjectNameSeparator, set.InstanceNumber)
+}
+
 // Builds an image for a container
 func (set *Container) BuildImage() error {
 	if err := set.Hooks.Run("before.build", set); err != nil {
@@ -236,31 +240,38 @@ func (set *Container) launchInForeground(cmd []interface{}, wg *sync.WaitGroup) 
 
 }
 
-func (set *Container) BlueGreenDeploy(attach bool, dryRun bool, wg *sync.WaitGroup) error {
+func (set *Container) BlueGreenCopy() (newCon *Container) {
 	// rename the current
-	Warning.Println("Temporarily renaming running container")
-	oldName := set.Name + "_old_" + helpers.RandStringBytesMaskImprSrc(5)
-	if err := helpers.RenameContainer(set.Name, oldName); err != nil {
-		return err
+	// if id then we have a color,
+	var newColor = "blue"
+	Debug.Println(set.State)
+	if set.State.Color == "blue" {
+		newColor = "green"
 	}
 
-	var oldC = new(Container)
-	*oldC = *set
-	oldC.Name = oldName
+	newCon = new(Container)
+	*newCon = *set
+	newCon.State.Color = newColor
+	newCon.NewName()
+	return
 
-	if err := set.Run(attach, dryRun, wg); err != nil {
+
+}
+
+func (set *Container) BlueGreenDeploy(attach bool, dryRun bool, wg *sync.WaitGroup) error {
+
+	newCon := set.BlueGreenCopy()
+
+	if err := newCon.Run(attach, dryRun, wg); err != nil {
 		// put back the old
-		set.Stop(nil)
-
-		Warning.Println("Error running new container, reverting container name")
-		if err := helpers.RenameContainer(oldName, set.Name); err != nil {
-			return err
-		}
-		return err
+		Warning.Println("Error running new container")
+		newCon.Kill(nil)
+		return  err
 	}
 
 	// shutdown the old
-	if err := oldC.Stop(nil); err != nil {
+	Info.Println("Removing old container "+set.Name+"...")
+	if err := set.Rm([]string{"-f"}); err != nil {
 		Error.Println("Error stopping old container")
 		return err
 	}
@@ -286,6 +297,8 @@ func createCapitanContainerLabels(ctr *Container, args []interface{}) []interfac
 		"--label",
 		ServiceLabelName + "=" + ctr.ServiceName,
 		"--label",
+		ServiceLabelType + "=" + ctr.ServiceType,
+		"--label",
 		ProjectLabelName + "=" + ctr.ProjectName,
 		"--label",
 		ContainerNumberLabelName + "=" + strconv.Itoa(ctr.InstanceNumber),
@@ -306,7 +319,7 @@ func (set *Container) Create(dryRun bool) error {
 		return err
 	}
 
-	cmd := set.RunArguments
+	cmd := set.GetRunArguments()
 	labels := createCapitanContainerLabels(set, cmd)
 	cmd = append(labels, cmd...)
 
@@ -330,7 +343,7 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 		return err
 	}
 
-	cmd := set.RunArguments
+	cmd := set.GetRunArguments()
 	labels := createCapitanContainerLabels(set, cmd)
 	cmd = append(labels, cmd...)
 

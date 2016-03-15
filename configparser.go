@@ -325,15 +325,13 @@ func (f *ConfigParser) scaleContainers(ctr *container.Container, state map[strin
 			}
 		}
 
-		ctrCopies[i].Name = fmt.Sprintf("%s%s%s%s%d", ctr.Name, ctr.ProjectNameSeparator, ctrCopies[i].State.Color, ctr.ProjectNameSeparator, i+1)
 		ctrCopies[i].ServiceName = ctr.Name
+		ctrCopies[i].NewName()
 
 		// HACK for container logging prefix width alignment, eg 'some_container | blahbla'
 		if len(ctrCopies[i].Name) > logger.LongestContainerName {
 			logger.LongestContainerName = len(ctrCopies[i].Name)
 		}
-
-		ctrCopies[i].RunArguments = ctrCopies[i].GetRunArguments()
 	}
 
 	return ctrCopies
