@@ -146,7 +146,9 @@ The project name, defaults to current working directory
 String to use to create container name from `project` and name specified in config
 
 ##### `global blue_green [true/false]`
-String to deploy using blue/green handover. 
+String to deploy using blue/green handover. Defaults to false. This can be turned on/off per container with
+
+    CONTAINER_NAME blue-green [true/false]
 
 #### Container Options
 

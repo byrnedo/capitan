@@ -94,6 +94,14 @@ func (h Hooks) Run(hookName string, ctr *Container) error {
 	return nil
 }
 
+type BlueGreenMode int
+
+const (
+	BGModeOff BlueGreenMode = iota
+	BGModeOn
+	BGModeUnknown
+)
+
 type Container struct {
 	// Container name
 	Name string
@@ -133,7 +141,9 @@ type Container struct {
 	InstanceNumber int
 	// Rm command given, therefore dont run as daemon
 	Remove bool
-
+	// Whether or not Blue/Green mode is enabled for this container
+	BlueGreenMode BlueGreenMode
+	IsBlueGreen bool
 	// The current state of the container
 	State *helpers.ServiceState
 }

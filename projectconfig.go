@@ -230,7 +230,7 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 // Recreates a container if the container's image has a newer id locally
 // OR if the command used to create the container is now changed (i.e.
 // config has changed.
-func (settings SettingsList) CapitanUp(attach bool, dryRun bool, blueGreenMode bool) error {
+func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 	sort.Sort(settings)
 
 	wg := sync.WaitGroup{}
@@ -282,7 +282,7 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool, blueGreenMode b
 
 		if haveArgsChanged(set.Name, set.GetRunArguments()) {
 			// remove and restart
-			if blueGreenMode {
+			if set.BlueGreenMode == container.BGModeOn {
 				Info.Println("Run arguments changed, doing blue-green redeploy:", set.Name)
 				if err = set.BlueGreenDeploy(attach, dryRun, &wg); err != nil {
 					return err

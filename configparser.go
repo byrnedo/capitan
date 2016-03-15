@@ -113,6 +113,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 				Placement: len(cmdsMap),
 				Hooks:     make(map[string]*container.Hook, 0),
 				Scale:     1,
+				BlueGreenMode: container.BGModeUnknown,
 			}
 		}
 
@@ -190,6 +191,15 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 				}
 				setting.Hooks = curHooks
 			}
+		case "blue-green":
+			if len(args) > 0 {
+				isBGMode, _ := strconv.ParseBool(args)
+				if isBGMode {
+					setting.BlueGreenMode = container.BGModeOn
+				} else {
+					setting.BlueGreenMode = container.BGModeOff
+				}
+			}
 		case "volumes-from":
 			argParts := strings.SplitN(args, " ", 2)
 			setting.VolumesFrom = append(setting.VolumesFrom, argParts[0])
@@ -233,6 +243,8 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 			item.Image = item.Name
 		}
 
+		f.processBlueGreenMode(projSettings.BlueGreenMode, &item)
+
 		f.processScaleArg(&item)
 
 		f.processCleanupTasks(projSettings, &item)
@@ -251,6 +263,18 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 
 
 	return nil
+}
+
+func (f *ConfigParser) processBlueGreenMode(globalBGMode bool, item *container.Container) {
+	if item.BlueGreenMode == container.BGModeUnknown {
+		if globalBGMode {
+			item.BlueGreenMode = container.BGModeOn
+		} else {
+			item.BlueGreenMode = container.BGModeOff
+		}
+	}
+
+
 }
 
 // Parse the volumes-from args and try and find first container with that type

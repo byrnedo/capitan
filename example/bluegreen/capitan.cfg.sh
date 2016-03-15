@@ -18,6 +18,7 @@ redis hook after.run sleep 3
 
 # sleep one second after 'start' command
 redis hook after.start sleep 1
+redis blue-green false
 redis scale 1
 
 # --------------------------------------------------
@@ -44,7 +45,7 @@ nats scale 1
 # Builds dockerfile locate at ./ and tags it as 'capitan_app', container will then use this image
 
 app build ../
-app hostname ${PREFIX}_app
+app hostname ${PREFIX}_apps
 
 # run 3 instances
 app scale 3
