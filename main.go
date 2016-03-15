@@ -64,12 +64,16 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Create then run or update containers",
 			Action: func(c *cli.Context) {
+				//first get settings
 				settings := getSettings()
+				//then should peek state
+				//TODO
+
 				settings.LaunchSignalWatcher()
 				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
-				if err := settings.ContainerList.CapitanUp(attach, dryRun); err != nil {
+				if err := settings.ContainerList.CapitanUp(attach, dryRun, settings.BlueGreenMode); err != nil {
 					Error.Println("Up failed:", err)
 					os.Exit(1)
 				}
@@ -136,7 +140,7 @@ func main() {
 				}
 				if err := settings.ContainerList.Filter(func(i *container.Container) bool {
 					return i.ServiceType == c.Args().Get(0)
-				}).CapitanUp(false, dryRun); err != nil {
+				}).CapitanUp(false, dryRun, settings.BlueGreenMode); err != nil {
 					Error.Println("Scale failed:", err)
 					os.Exit(1)
 				}

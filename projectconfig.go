@@ -17,6 +17,11 @@ import (
 
 const containerShowTemplate = `{{.Name}}:
   Name:  {{.ServiceName}}
+  State:
+    ID: {{.State.ID}}
+    Color: {{.State.Color}}
+    Running: {{.State.Running}}
+    Hash: {{.State.ArgsHash}}
   Type:  {{.ServiceType}}
   Image: {{.Image}}{{if .Build}}
   Build: {{.Build}}{{end}}
@@ -32,7 +37,6 @@ const containerShowTemplate = `{{.Name}}:
     {{$val}}{{end}}
   Run Args:   {{range $ind, $val := .RunArguments}}
     {{$val}}{{end}}
-
 `
 
 var (
@@ -42,7 +46,9 @@ var (
 type ProjectConfig struct {
 	ProjectName          string
 	ProjectSeparator     string
+	BlueGreenMode	     bool
 	IsInteractive        bool
+	ContainersState	     []*helpers.ServiceState
 	ContainerList        SettingsList
 	ContainerCleanupList SettingsList
 }
@@ -158,7 +164,7 @@ func newerImage(container string, image string) bool {
 
 func haveArgsChanged(container string, runArgs []interface{}) bool {
 
-	uniqueLabel := fmt.Sprintf("%s", runArgs)
+	uniqueLabel := helpers.HashInterfaceSlice(runArgs)
 	if helpers.GetContainerUniqueLabel(container) != uniqueLabel {
 		return true
 	}
@@ -224,7 +230,7 @@ func (settings SettingsList) CapitanCreate(dryRun bool) error {
 // Recreates a container if the container's image has a newer id locally
 // OR if the command used to create the container is now changed (i.e.
 // config has changed.
-func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
+func (settings SettingsList) CapitanUp(attach bool, dryRun bool, blueGreenMode bool) error {
 	sort.Sort(settings)
 
 	wg := sync.WaitGroup{}
@@ -274,17 +280,24 @@ func (settings SettingsList) CapitanUp(attach bool, dryRun bool) error {
 		//			continue
 		//		}
 
-		if haveArgsChanged(set.Name, set.RunArguments) {
+		if haveArgsChanged(set.Name, set.GetRunArguments()) {
 			// remove and restart
-			Info.Println("Removing (run arguments changed):", set.Name)
-			if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
-				return err
+			if blueGreenMode {
+				Info.Println("Run arguments changed, doing blue-green redeploy:", set.Name)
+				if err = set.BlueGreenDeploy(attach, dryRun, &wg); err != nil {
+					return err
+				}
+			} else {
+				Info.Println("Removing (run arguments changed):", set.Name)
+				if err = set.RecreateAndRun(attach, dryRun, &wg); err != nil {
+					return err
+				}
 			}
 			continue
 		}
 
 		//attach if running
-		if helpers.ContainerIsRunning(set.Name) {
+		if set.State.Running {
 			Info.Println("Already running " + set.Name)
 			if attach {
 				Info.Println("Attaching")
@@ -321,7 +334,7 @@ func (settings SettingsList) CapitanStart(attach bool, dryRun bool) error {
 	wg := sync.WaitGroup{}
 	for _, set := range settings {
 
-		if helpers.ContainerIsRunning(set.Name) {
+		if set.State.Running {
 			Info.Println("Already running " + set.Name)
 			if attach {
 				Info.Println("Attaching")
@@ -420,7 +433,7 @@ func (settings SettingsList) CapitanStats() error {
 func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
-		if !helpers.ContainerIsRunning(set.Name) {
+		if !set.State.Running {
 			Info.Println("Already stopped", set.Name)
 			continue
 		}
@@ -438,7 +451,7 @@ func (settings SettingsList) CapitanKill(args []string, dryRun bool) error {
 func (settings SettingsList) CapitanStop(args []string, dryRun bool) error {
 	sort.Sort(sort.Reverse(settings))
 	for _, set := range settings {
-		if !helpers.ContainerIsRunning(set.Name) {
+		if !set.State.Running {
 			Info.Println("Already stopped", set.Name)
 			continue
 		}

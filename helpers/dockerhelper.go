@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+"strconv"
 )
 
 func ContainerExitCode(containerName string) string {
@@ -142,14 +143,21 @@ func RunCmd(args ...interface{}) (out []byte, err error) {
 
 // Get the value of the label used to record the run
 // arguments used when creating the container
-func GetContainerUniqueLabel(name string) string {
-	return getLabel(UniqueLabelName, name)
+func GetContainerUniqueLabel(containerName string) string {
+	return getLabel(UniqueLabelName, containerName)
 }
 
 // Get the value of the label used to record the run
 // service name (for scaling)
-func GetContainerServiceNameLabel(name string) string {
-	return getLabel(ServiceLabelName, name)
+func GetContainerServiceNameLabel(containerName string) string {
+	return getLabel(ServiceLabelName, containerName)
+}
+
+func RenameContainer(currentName string, newName string) error {
+	ses := sh.NewSession()
+	ses.Stderr = ioutil.Discard
+	_, err := ses.Command("docker", "rename", currentName, newName).Output()
+	return err
 }
 
 func getLabel(label string, container string) string {
@@ -163,14 +171,24 @@ func getLabel(label string, container string) string {
 	return value
 }
 
-type Service struct {
+type ServiceState struct {
 	ID   string
 	Name string
+	ServiceName string
+	InstanceNum int
+	Color string
+	Running bool
+	ArgsHash string
 }
 
-func InstancesOfService(service string) (svcs []*Service) {
+func GetProjectState(projName string, projSep string) (svcs map[string]*ServiceState, err error) {
 	ses := sh.NewSession()
-	out, err := ses.Command("docker", "ps", "-af", fmt.Sprintf("label=%s=%s", ServiceLabelName, service), "--format", "{{.ID}} {{.Names}}").Output()
+	out, err := ses.Command("docker",
+		"ps",
+		"-af",
+		fmt.Sprintf("label=%s=%s", ProjectLabelName, projName),
+		"--format",
+		fmt.Sprintf(`{{.ID}}\t{{.Names}}\t{{.Label "%s"}}\t{{.Label "%s"}}\t{{.Label "%s"}}\t{{.Status}}\t{{.Label "%s"}}`, ColorLabelName, ServiceLabelName, ContainerNumberLabelName, UniqueLabelName)).Output()
 	if err != nil {
 		return
 	}
@@ -180,14 +198,65 @@ func InstancesOfService(service string) (svcs []*Service) {
 
 	out = bytes.Trim(out, "\n")
 
-	svcs = make([]*Service, 0)
+	Debug.Println(string(out))
+
+	svcs = make(map[string]*ServiceState, 0)
 	for _, line := range bytes.Split(out, []byte{'\n'}) {
-		lineParts := bytes.Split(line, []byte{' '})
-		if len(lineParts) != 2 {
+		lineParts := bytes.Split(line, []byte{'\t'})
+
+		if len(lineParts) < 2 {
 			continue
 		}
-		svcs = append(svcs, &Service{ID: string(lineParts[0]), Name: filepath.Base(string(lineParts[1]))})
+
+		id := string(lineParts[0])
+		names := string(lineParts[1])
+
+		var color string
+		if len(lineParts) > 2 {
+			color = string(lineParts[2])
+		}
+		if color == "" {
+			color = "blue"
+		}
+
+		var serviceName string
+		if len(lineParts) > 3 {
+			serviceName = string(lineParts[3])
+		}
+
+		var instanceNum int
+		if len(lineParts) > 4 {
+			if instanceNum, err = strconv.Atoi(string(lineParts[4])); err != nil {
+				Warning.Println("Instance number label missing, parsing from name")
+				if instanceNum, err = GetNumericSuffix(names, projSep); err != nil {
+					return nil, errors.New("Failed to parse instance number for container: " + names)
+				}
+			}
+		}
+
+		var running = false
+		if len(lineParts) > 5 {
+			if bytes.HasPrefix(bytes.TrimSpace(lineParts[5]), []byte("Up")){
+				running = true
+			}
+		}
+
+		var argsHash string
+		if len(lineParts) > 6 {
+			argsHash = string(lineParts[6])
+		}
+
+		name := filepath.Base(names)
+		svcs[serviceName + projSep + strconv.Itoa(instanceNum)] = &ServiceState{
+			ID: id,
+			Name: name,
+			ServiceName: serviceName,
+			InstanceNum: instanceNum,
+			Color: color,
+			Running: running,
+			ArgsHash : argsHash,
+		}
 	}
 	return
-
 }
+
