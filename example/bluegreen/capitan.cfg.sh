@@ -11,10 +11,10 @@ global blue_green true
 # --------------------------------------------------
 #
 redis image redis:latest
-redis hostname ${PREFIX}_rediss
+redis hostname ${PREFIX}_redis
 
 # sleep one second after 'run' command
-redis hook after.run sleep 3
+redis hook after.run sleep 3 && exit 2
 
 # sleep one second after 'start' command
 redis hook after.start sleep 1

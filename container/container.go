@@ -264,7 +264,7 @@ func (set *Container) BlueGreenDeploy(attach bool, dryRun bool, wg *sync.WaitGro
 
 	if err := newCon.Run(attach, dryRun, wg); err != nil {
 		// put back the old
-		Warning.Println("Error running new container")
+		Warning.Println("Error running new container, killing...")
 		newCon.Kill(nil)
 		return  err
 	}

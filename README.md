@@ -7,8 +7,16 @@ Capitan is a tool for managing multiple Docker containers based largely on [crow
 Capitan is only a wrapper around the docker cli tool, no api usage whatsoever (well... an `inspect` command here and there).
 This means it will basically work with all versions of docker.
 
-![Capitan showcase]
-(output.gif)
+    $ capitan up
+    Run arguments changed, doing blue-green redeploy: capitan_redis_green_1
+    Running capitan_redis_blue_1
+    cd939956f332391489d0383610d9da2c420595d495934c3221376dbf68854316
+    Removing old container capitan_redis_green_1...
+    Already running capitan_mongo_blue_1
+    Already running capitan_nats_blue_1
+    Already running capitan_app_blue_1
+    Already running capitan_app_blue_2
+    Already running capitan_app_blue_3
 
 ## Installation
 
@@ -20,10 +28,11 @@ Or using go:
 
 ## Capitan Features
 
-1. Shell Support - Config is read from stdout of a shell command. Extremely flexible
-2. Hooks - hooks for before and after every intrusive action
-3. Predictable run sequence - containers started in order defined
-4. Future proof - options are passed through on most commands to docker cli, very simple.
+1. Shell Support - Config is read from stdout of a shell command. Extremely flexible.
+2. Hooks - hooks for before and after every intrusive action.
+3. Predictable run sequence - containers started in order defined.
+4. [Blue/Green](https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html) deployment - option to only remove original container if new container starts and passes hook commands.
+5. Future proof - options are passed through on most commands to docker cli, very simple.
 
 ## Commands
 
@@ -128,6 +137,19 @@ Service config is read from stdout of the command defined with `--cmd` .
 
 You could use any command which generates a valid config. It doesn't have to be a bash script like in the example or default.
 
+#### Global options
+
+##### `global project`
+The project name, defaults to current working directory
+
+##### `global project_sep`
+String to use to create container name from `project` and name specified in config
+
+##### `global blue_green [true/false]`
+String to deploy using blue/green handover. 
+
+#### Container Options
+
 The output format must be:
 
     CONTAINER_NAME COMMAND [ARGS...]
@@ -183,12 +205,6 @@ An attempt to resolve a volume-from arg to the first instance of a container is 
 
 WARNING: When scaling, if the container name resolves to a container defined in capitan's config, it will always resolve to the first instance.
 For example: `app volumes-from mycontainer` will always resolve to `<project>_mycontainer_1`
-
-####`global project`
-The project name, defaults to current working directory
-
-#### `global project_sep`
-String to use to create container name from `project` and name specified in config
 
 ### Environment Variables 
 
