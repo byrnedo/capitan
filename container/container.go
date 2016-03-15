@@ -281,9 +281,11 @@ func (set *Container) BlueGreenDeploy(attach bool, dryRun bool, wg *sync.WaitGro
 
 	// shutdown the old
 	Info.Println("Removing old container "+set.Name+"...")
-	if err := set.Rm([]string{"-f"}); err != nil {
-		Error.Println("Error stopping old container")
-		return err
+	if ! dryRun {
+		if err := set.Rm([]string{"-f"}); err != nil {
+			Error.Println("Error stopping old container")
+			return err
+		}
 	}
 
 	return nil
