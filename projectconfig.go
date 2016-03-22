@@ -13,7 +13,18 @@ import (
 	"sync"
 	"syscall"
 	"text/template"
+	"github.com/byrnedo/capitan/shellsession"
 )
+
+const projectShowTemplate = `-------------------------------------------------
+  Project Name:  {{.ProjectName}}
+  Blue/Green Mode (Global): {{.BlueGreenMode}}
+  Hooks (Global): {{range $key, $val := .Hooks}}
+    {{$key}}
+      {{range $hook := $val.Scripts}}{{$hook}}
+      {{end}}{{end}}
+-------------------------------------------------
+`
 
 const containerShowTemplate = `{{.Name}}:
   Name:  {{.ServiceName}}
@@ -26,6 +37,7 @@ const containerShowTemplate = `{{.Name}}:
   Image: {{.Image}}{{if .Build}}
   Build: {{.Build}}{{end}}
   Order: {{.Placement}}
+  Blue/Green Mode: {{.BlueGreenMode}}
   Links: {{range $ind, $link := .Links}}
     {{$link.Container}}{{if $link.Alias}}:{{$link.Alias}}{{end}}{{end}}
   Hooks: {{range $key, $val := .Hooks}}
@@ -37,6 +49,7 @@ const containerShowTemplate = `{{.Name}}:
     {{$val}}{{end}}
   Run Args:   {{range $ind, $val := .RunArguments}}
     {{$val}}{{end}}
+-------------------------------------------------
 `
 
 var (
@@ -51,6 +64,45 @@ type ProjectConfig struct {
 	ContainersState	     []*helpers.ServiceState
 	ContainerList        SettingsList
 	ContainerCleanupList SettingsList
+	Hooks 		     Hooks
+}
+
+type Hook struct {
+	Scripts []string
+	Ses     *shellsession.ShellSession
+}
+
+type Hooks map[string]*Hook
+
+// Runs a hook command if it exists for a specific container
+func (h Hooks) Run(hookName string, settings *ProjectConfig) error {
+	var (
+		hook  *Hook
+		found bool
+		err   error
+	)
+
+	if hook, found = h[hookName]; !found {
+		return nil
+	}
+
+	for _, script := range hook.Scripts {
+		hook.Ses = shellsession.NewShellSession(func(s *shellsession.ShellSession){
+			s.SetEnv("CAPITAN_PROJECT_NAME", settings.ProjectName)
+		})
+		hook.Ses.SetEnv("CAPITAN_HOOK_NAME", hookName)
+
+		hook.Ses.Command("bash", "-c", script)
+
+		hook.Ses.Stdout = os.Stdout
+		hook.Ses.Stderr = os.Stderr
+		hook.Ses.Stdin = os.Stdin
+
+		if err = hook.Ses.Run(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type SettingsList []*container.Container
@@ -152,6 +204,45 @@ func (settings *ProjectConfig) LaunchSignalWatcher() {
 	}()
 }
 
+func (settings *ProjectConfig) RunHook(hookName string) bool {
+	if err:= settings.Hooks.Run(hookName,settings); err != nil {
+		Error.Println("Hook failed:", err)
+		return false
+	}
+	return true
+}
+
+func (settings *ProjectConfig) CapitanPs(args []string) error {
+
+	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
+	allArgs = append(allArgs, "-f", fmt.Sprintf("label=%s=%s", consts.ProjectLabelName, settings.ProjectName))
+
+	var (
+		err error
+		out []byte
+	)
+	if out, err = helpers.RunCmd(allArgs...); err != nil {
+		return err
+	}
+	Info.Print(string(out))
+	return nil
+
+}
+
+func (settings *ProjectConfig) CapitanShow() error {
+	var (
+		tmpl *template.Template
+		err  error
+	)
+	if tmpl, err = template.New("projectStringer").Parse(projectShowTemplate); err != nil {
+		return err
+	}
+	if err = tmpl.Execute(os.Stdout, settings); err != nil {
+		return err
+	}
+	return settings.ContainerList.CapitanShow()
+}
+
 func newerImage(container string, image string) bool {
 
 	conImage := helpers.GetContainerImageId(container)
@@ -173,22 +264,6 @@ func haveArgsChanged(container string, runArgs []interface{}) bool {
 
 }
 
-func (settings *ProjectConfig) CapitanPs(args []string) error {
-
-	allArgs := append([]interface{}{"ps"}, helpers.ToInterfaceSlice(args)...)
-	allArgs = append(allArgs, "-f", fmt.Sprintf("label=%s=%s", consts.ProjectLabelName, settings.ProjectName))
-
-	var (
-		err error
-		out []byte
-	)
-	if out, err = helpers.RunCmd(allArgs...); err != nil {
-		return err
-	}
-	Info.Print(string(out))
-	return nil
-
-}
 
 func (settings SettingsList) CapitanCreate(dryRun bool) error {
 	sort.Sort(settings)

@@ -66,15 +66,18 @@ func main() {
 			Action: func(c *cli.Context) {
 				//first get settings
 				settings := getSettings()
-				//then should peek state
-				//TODO
-
 				settings.LaunchSignalWatcher()
+				if ! settings.RunHook("before.up") {
+					os.Exit(1)
+				}
 				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanUp(attach, dryRun); err != nil {
 					Error.Println("Up failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.up") {
 					os.Exit(1)
 				}
 
@@ -93,11 +96,17 @@ func main() {
 			Usage:   "Create containers, but don't run them",
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.create") {
+					os.Exit(1)
+				}
 				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanCreate(dryRun); err != nil {
 					Error.Println("Create failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.create") {
 					os.Exit(1)
 				}
 
@@ -110,11 +119,17 @@ func main() {
 			Action: func(c *cli.Context) {
 				settings := getSettings()
 				settings.LaunchSignalWatcher()
+				if ! settings.RunHook("before.start") {
+					os.Exit(1)
+				}
 				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanStart(attach, dryRun); err != nil {
 					Error.Println("Start failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.start") {
 					os.Exit(1)
 				}
 			},
@@ -133,6 +148,9 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.scale") {
+					os.Exit(1)
+				}
 				if err := settings.ContainerCleanupList.Filter(func(i *container.Container) bool {
 					return i.ServiceType == c.Args().Get(0)
 				}).CapitanRm([]string{"-f"}, dryRun); err != nil {
@@ -144,6 +162,9 @@ func main() {
 					Error.Println("Scale failed:", err)
 					os.Exit(1)
 				}
+				if ! settings.RunHook("after.scale") {
+					os.Exit(1)
+				}
 			},
 		},
 		{
@@ -153,11 +174,17 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.restart") {
+					os.Exit(1)
+				}
 				if err := settings.ContainerCleanupList.CapitanRm([]string{"-f"}, dryRun); err != nil {
 					Warning.Println("Failed to scale down containers:", err)
 				}
 				if err := settings.ContainerList.CapitanRestart(c.Args(), dryRun); err != nil {
 					Error.Println("Restart failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.restart") {
 					os.Exit(1)
 				}
 			},
@@ -169,9 +196,15 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.stop") {
+					os.Exit(1)
+				}
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanStop(c.Args(), dryRun); err != nil {
 					Error.Println("Stop failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.stop") {
 					os.Exit(1)
 				}
 			},
@@ -183,9 +216,15 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.kill") {
+					os.Exit(1)
+				}
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanKill(c.Args(), dryRun); err != nil {
 					Error.Println("Kill failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.kill") {
 					os.Exit(1)
 				}
 			},
@@ -197,9 +236,15 @@ func main() {
 			SkipFlagParsing: true,
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.rm") {
+					os.Exit(1)
+				}
 				combined := append(settings.ContainerList, settings.ContainerCleanupList...)
 				if err := combined.CapitanRm(c.Args(), dryRun); err != nil {
 					Error.Println("Rm failed:", err)
+					os.Exit(1)
+				}
+				if ! settings.RunHook("after.rm") {
 					os.Exit(1)
 				}
 			},
@@ -238,11 +283,16 @@ func main() {
 			Usage:   "Build any containers with 'build' flag set",
 			Action: func(c *cli.Context) {
 				settings := getSettings()
+				if ! settings.RunHook("before.build") {
+					os.Exit(1)
+				}
 				if err := settings.ContainerList.CapitanBuild(dryRun); err != nil {
 					Error.Println("Build failed:", err)
 					os.Exit(1)
 				}
-
+				if ! settings.RunHook("after.build") {
+					os.Exit(1)
+				}
 			},
 		},
 		{
@@ -292,7 +342,7 @@ func main() {
 			Usage:   "Prints config as interpreted by Capitan",
 			Action: func(c *cli.Context) {
 				settings := getSettings()
-				if err := settings.ContainerList.CapitanShow(); err != nil {
+				if err := settings.CapitanShow(); err != nil {
 					Error.Println("Show failed:", err)
 					os.Exit(1)
 				}

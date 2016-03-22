@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 "strconv"
+	"github.com/byrnedo/capitan/shellsession"
 )
 
 var (
@@ -60,10 +61,20 @@ const (
 
 type Hook struct {
 	Scripts []string
-	Ses     *ShellSession
+	Ses     *shellsession.ShellSession
 }
 
 type Hooks map[string]*Hook
+
+
+func NewContainerShellSession(ctr *Container) *shellsession.ShellSession {
+	return shellsession.NewShellSession(func(s *shellsession.ShellSession){
+		s.SetEnv("CAPITAN_CONTAINER_NAME", ctr.Name)
+		s.SetEnv("CAPITAN_CONTAINER_SERVICE_TYPE", ctr.ServiceType)
+		s.SetEnv("CAPITAN_CONTAINER_INSTANCE_NUMBER", strconv.Itoa(ctr.InstanceNumber))
+		s.SetEnv("CAPITAN_PROJECT_NAME", ctr.ProjectName)
+	})
+}
 
 // Runs a hook command if it exists for a specific container
 func (h Hooks) Run(hookName string, ctr *Container) error {
@@ -175,7 +186,7 @@ func (set *Container) BuildImage() error {
 
 func (set *Container) launchWithRmInForeground(cmd []interface{}) error {
 	var (
-		ses *ShellSession
+		ses *shellsession.ShellSession
 		err error
 	)
 
@@ -204,7 +215,7 @@ func (set *Container) launchWithRmInForeground(cmd []interface{}) error {
 func (set *Container) launchInForeground(cmd []interface{}, wg *sync.WaitGroup) error {
 
 	var (
-		ses *ShellSession
+		ses *shellsession.ShellSession
 		err error
 	)
 
@@ -379,7 +390,7 @@ func (set *Container) Run(attach bool, dryRun bool, wg *sync.WaitGroup) error {
 
 func (set *Container) launchDaemonCommand(cmd []interface{}) error {
 	var (
-		ses *ShellSession
+		ses *shellsession.ShellSession
 		err error
 	)
 	ses = NewContainerShellSession(set)
@@ -394,7 +405,7 @@ func (set *Container) launchDaemonCommand(cmd []interface{}) error {
 	return err
 }
 
-func (set *Container) startLoggedCommand(cmd []interface{}) (*ShellSession, error) {
+func (set *Container) startLoggedCommand(cmd []interface{}) (*shellsession.ShellSession, error) {
 	ses := NewContainerShellSession(set)
 
 	color := nextColor()
@@ -444,7 +455,7 @@ func (set *Container) GetRunArguments() []interface{} {
 func (set *Container) Attach(wg *sync.WaitGroup) error {
 	var (
 		err error
-		ses *ShellSession
+		ses *shellsession.ShellSession
 	)
 	if ses, err = set.startLoggedCommand(append([]interface{}{"attach", "--sig-proxy=false"}, set.Name)); err != nil {
 		return err

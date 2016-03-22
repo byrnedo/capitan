@@ -75,8 +75,8 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 	projNameArr := strings.Split(projName, "_")
 	projSettings = new(ProjectConfig)
 	projSettings.ProjectName = projNameArr[len(projNameArr)-1]
-
 	projSettings.ProjectSeparator = "_"
+	projSettings.Hooks = make(Hooks)
 
 	for lineNum, line := range lines {
 
@@ -100,6 +100,18 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 					projSettings.ProjectSeparator = stripChars(string(lineParts[2]), " \t")
 				case "blue_green":
 					projSettings.BlueGreenMode, _ = strconv.ParseBool(string(lineParts[2]))
+				case "hook":
+					hookAndCommand := bytes.SplitN(lineParts[2], []byte{' '}, 2)
+					if len(hookAndCommand) == 2 {
+						hookName := string(hookAndCommand[0])
+						hookScript := string(hookAndCommand[1])
+						hook := projSettings.Hooks[hookName]
+						if hook == nil {
+							hook = new(Hook)
+						}
+						hook.Scripts = append(hook.Scripts, hookScript)
+						projSettings.Hooks[hookName] = hook
+					}
 				}
 			}
 			continue

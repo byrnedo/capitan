@@ -152,6 +152,20 @@ String to use to create container name from `project` and name specified in conf
 String to deploy using blue/green handover. Defaults to false. This can be turned on/off per container with
 
     CONTAINER_NAME blue-green [true/false]
+    
+#### `global hook [hook name] [hook command]`
+Allows for a custom shell command to be evaluated once at the following points:
+
+- Before/After up (`before.up`, `after.up`)
+    - This occurs during the `up` command
+- Before/After Start (`before.start`, `after.start`)
+    - This will occur in the `start` command
+- Before/After Stop (`before.stop`, `after.stop`)
+    - This will occur in the `stop` command
+- Before/After Kill (`before.kill`, `after.kill`)
+    - This will occur in the `kill` command
+- Before/After Rm (`before.rm`, `after.rm`)
+    - This will occur in the `rm` command
 
 #### Container Options
 
@@ -167,8 +181,8 @@ This allows a path to be given for a dockerfile. Note, it will attempt to build 
 #### `build-args`
 Any further arguments that need to be passed when building.
 
-#### `hook`
-Allows for a custom shell command to be evaluated at the following points:
+#### `hook [hook name] [hook command]`
+Allows for a custom shell command to be evaluated at the following points **for each container**
 
 - Before/After Run (`before.run`, `after.run`)
     - This occurs during the `up` command
@@ -213,7 +227,7 @@ For example: `app volumes-from mycontainer` will always resolve to `<project>_my
 
 ### Environment Variables 
 
-The following environment variables are available when creating the containers and when running hooks
+The following environment variables are available when creating the containers and when running **container hooks**
 
     # container name
     CAPITAN_CONTAINER_NAME
@@ -224,9 +238,11 @@ The following environment variables are available when creating the containers a
     # the project name
     CAPITAN_PROJECT_NAME
     
-The following environment variables are only available to hook scripts
+The following environment variables are available to all **hook** scripts
 
+    CAPITAN_PROJECT_NAME
     CAPITAN_HOOK_NAME
+    
 
 For example, following `capitan.cfg.sh`
 

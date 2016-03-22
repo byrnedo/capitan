@@ -4,6 +4,8 @@ PREFIX=dev
 cat <<EOF
 # Set project name to 'capitan'
 global project capitan
+global hook before.up echo "global pre up hook gets run before any containers are brought up"
+global hook before.start echo "global pre start hook gets run before any containers are started"
 
 # --------------------------------------------------
 # General redis container
