@@ -13,6 +13,7 @@ var (
 	verboseLog bool
 	dryRun     bool
 	attach     bool
+	filter     string
 )
 
 func main() {
@@ -37,6 +38,12 @@ func main() {
 			Name:        "dry-run,dry",
 			Usage:       "preview outcome, no changes will be made",
 			Destination: &dryRun,
+		},
+		cli.StringFlag{
+			Name:        "filter,f",
+			Value:       "",
+			Usage:       "Filter to run action on a specific container only",
+			Destination: &filter,
 		},
 	}
 
@@ -357,7 +364,7 @@ func getSettings() (settings *ProjectConfig) {
 	var (
 		err error
 	)
-	runner := NewSettingsParser(command, args)
+	runner := NewSettingsParser(command, args, filter)
 	if settings, err = runner.Run(); err != nil {
 		Error.Printf("Error running command: %s\n", err)
 		os.Exit(1)

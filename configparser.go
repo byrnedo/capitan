@@ -22,12 +22,15 @@ type ConfigParser struct {
 	Command string
 	// args given to cli
 	Args cli.Args
+	// the container filter
+	Filter string
 }
 
-func NewSettingsParser(cmd string, args cli.Args) *ConfigParser {
+func NewSettingsParser(cmd string, args cli.Args, filter string) *ConfigParser {
 	return &ConfigParser{
 		Command: cmd,
 		Args:    args,
+		Filter:  filter,
 	}
 }
 
@@ -245,6 +248,10 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 	projSettings.ContainerList = make(SettingsList, 0)
 
 	for name, item := range parsedConfig {
+		if f.Filter != "" && f.Filter != name {
+			continue
+		}
+
 		item.Name = projSettings.ProjectName + projSettings.ProjectSeparator + name
 		item.ServiceType = name
 		item.ProjectName = projSettings.ProjectName

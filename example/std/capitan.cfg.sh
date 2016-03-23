@@ -50,13 +50,4 @@ app hostname ${PREFIX}_app
 # run 3 instances
 app scale 3
 
-# 'mongo' will resolve to capitan_mongo_1
-app link mongo:mgo
-
-# 'nats' will resolve to capitan_nats_1
-app volumes-from nats
-
-# or if you want to be explicit ( or reference an external container )
-app volumes-from capitan_nats_1
-
 EOF
