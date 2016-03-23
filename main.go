@@ -26,17 +26,17 @@ func main() {
 		cli.StringFlag{
 			Name:        "cmd,c",
 			Value:       "./capitan.cfg.sh",
-			Usage:       "command to obtain config from",
+			Usage:       "Command to obtain config from",
 			Destination: &command,
 		},
 		cli.BoolFlag{
 			Name:        "debug,d",
-			Usage:       "print extra log messages",
+			Usage:       "Print extra log messages",
 			Destination: &verboseLog,
 		},
 		cli.BoolFlag{
 			Name:        "dry-run,dry",
-			Usage:       "preview outcome, no changes will be made",
+			Usage:       "Preview outcome, no changes will be made",
 			Destination: &dryRun,
 		},
 		cli.StringFlag{

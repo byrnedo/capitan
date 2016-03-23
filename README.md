@@ -126,19 +126,35 @@ Build any containers with 'build' flag set (WIP)
 
      
 ### Global options
-     --cmd, -c "./capitan.cfg.sh"	command used to obtain config
-     --debug, -d				    print extra log messages
-     --dry-run, --dry			    preview outcome, no changes will be made
-     --help, -h				        show help
-     --version, -v			        print the version
+
+     --cmd, -c "./capitan.cfg.sh"	Command used to obtain config
+     --debug, -d				    Print extra log messages
+     --dry-run, --dry			    Preview outcome, no changes will be made
+     --filter, -f 		            Filter to run action on a specific container only
+     --help, -h				        Show help
+     --version, -v			        Print the version
 
 ### Config file/output
 
 Service config is read from stdout of the command defined with `--cmd` .
 
-`capitan` by default runs the command `./capitan.cfg.sh` in the current directory to get the config. This can be customized with `-c` flag.
+`capitan` by default runs the command `./capitan.cfg.sh` in the current directory to get the config. This can be customized with `--cmd|-c` flag.
+
+    capitan --cmd ./someotherexecutable <some action>
 
 You could use any command which generates a valid config. It doesn't have to be a bash script like in the example or default.
+
+### Filtering
+
+A single service type can specified for an action by using the `--filter|-f` flag. So if your conf looked like this:
+
+    ...
+    fooapp hostname blah
+    ...
+    
+You could filter any command to run on just that service type by doing:
+
+    capitan --filter fooapp <some action>
 
 #### Global options
 
