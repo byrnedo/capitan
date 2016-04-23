@@ -154,7 +154,8 @@ type Container struct {
 	Remove bool
 	// Whether or not Blue/Green mode is enabled for this container
 	BlueGreenMode BlueGreenMode
-	IsBlueGreen bool
+	// Is this container enabled or not
+	Enabled bool
 	// The current state of the container
 	State *helpers.ServiceState
 }

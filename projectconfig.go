@@ -606,6 +606,7 @@ func (settings SettingsList) CapitanShow() error {
 		if tmpl, err = template.New("containerStringer").Parse(containerShowTemplate); err != nil {
 			return err
 		}
+		set.RunArguments = set.GetRunArguments()
 		if err = tmpl.Execute(os.Stdout, set); err != nil {
 			return err
 		}

@@ -129,6 +129,7 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 				Hooks:     make(map[string]*container.Hook, 0),
 				Scale:     1,
 				BlueGreenMode: container.BGModeUnknown,
+				Enabled: true,
 			}
 		}
 
@@ -215,6 +216,10 @@ func (f *ConfigParser) parseSettings(lines [][]byte) (projSettings *ProjectConfi
 					setting.BlueGreenMode = container.BGModeOff
 				}
 			}
+		case "enabled":
+			if len(args) > 0 {
+				setting.Enabled, _ = strconv.ParseBool(args)
+			}
 		case "volumes-from":
 			argParts := strings.SplitN(args, " ", 2)
 			setting.VolumesFrom = append(setting.VolumesFrom, argParts[0])
@@ -249,6 +254,10 @@ func (f *ConfigParser) postProcessConfig(parsedConfig map[string]container.Conta
 
 	for name, item := range parsedConfig {
 		if f.Filter != "" && f.Filter != name {
+			continue
+		}
+
+		if ! item.Enabled {
 			continue
 		}
 
