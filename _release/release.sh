@@ -4,11 +4,11 @@ set -euo pipefail
 SCRIPT=`realpath $0`
 SCRIPT_PATH=`dirname $SCRIPT`
 BUILD_PATH=$SCRIPT_PATH/../build
-if [[ $# -lt 1 ]]
-then
-    >&2 echo must give release version as argument
-    exit 1
-fi
+GITHUB_TOKEN="${GITHUB_TOKEN:=}"
+[ -z "$GITHUB_TOKEN" ] && >&2 echo "Must set GITHUB_TOKEN env" && exit 1
+
+[ $# -lt 1 ] && >&2 echo must give release version as argument && exit 1
+
 RELEASE_VERSION=$1
 
 if GIT_DIR=$SCRIPT_PATH/../.git git rev-parse $RELEASE_VERSION >/dev/null 2>&1
