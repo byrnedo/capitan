@@ -1,0 +1,8 @@
+package: github.com/byrnedo/capitan
+import:
+- package: github.com/codegangsta/cli
+  version: ^1.19.1
+- package: github.com/codeskyblue/go-sh
+  version: master
+- package: github.com/mgutz/ansi
+- package: github.com/mgutz/str

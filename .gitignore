@@ -29,3 +29,4 @@ capitan.iml
 capitan
 
 build/*
+vendor/
